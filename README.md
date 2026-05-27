@@ -24,17 +24,25 @@ this image to this device?"* — GARD asks *"Should this device be upgraded, to
 what, through which path, under which prerequisites, with what risk, approved by
 whom, executed by which adapter, validated how, and evidenced where?"*
 
+
+
+## Why we're building
+
+GARD is a prototype for seeing how far I can get with Github speckit and a bunch of cursor tokens,  and a pretty good idea on what I want to archieve.
+
+I want to build a framwork for how to analyze and uplift new onboarded, and existing installbase devices to the target firmware versions. 
+
 ## Product boundary
 
 - **NetBox** (or equivalent) remains the source of infrastructure identity.
 - **GARD** owns lifecycle policy, target state, drift, risk, readiness,
-  planning, approval and evidence.
-- **TR-069 / TR-369 / NETCONF / CLI / NSO / Ansible / vendor APIs** are
-  southbound execution adapters — GARD never replaces them.
+planning, approval and evidence.
+- **TR-069 / TR-369 / NETCONF / CLI / NSO / Ansible / netmiko / vendor APIs** are  
+southbound execution adapters — GARD never replaces them.
 - **MCP** exposes curated, audited lifecycle tools to approved AI agents — never
-  raw SQL or shell.
+raw SQL or shell.
 
-See [`gard-speckit-start/adr/`](gard-speckit-start/adr/) for the binding
+See `[gard-speckit-start/adr/](gard-speckit-start/adr/)` for the binding
 architectural decisions.
 
 ## Repository layout
@@ -62,20 +70,20 @@ architectural decisions.
 ## Constitution (the binding rules)
 
 Seven principles govern every change. Full text:
-[`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+`[.specify/memory/constitution.md](.specify/memory/constitution.md)`.
 
 1. **Governance Before Execution** — no autonomous v1; approval gates everywhere.
 2. **Desired State and Actual State Are Separate** — drift/risk/readiness are
-   derived, never stored as truth.
+  derived, never stored as truth.
 3. **Unknown Is a First-Class Lifecycle State** — no silent defaults, no hidden
-   rows.
+  rows.
 4. **Lifecycle-as-Code** — catalogues version-controlled with declared schemas.
 5. **Evidence, Audit & Explainability (NON-NEGOTIABLE)** — append-only audit +
-   `LifecycleEvidence` + cited classifications.
+  `LifecycleEvidence` + cited classifications.
 6. **MCP Exposes Curated Tools, Not Raw Infrastructure** — same RBAC + audit as
-   the REST surface.
+  the REST surface.
 7. **Integration Over Replacement** — NetBox = identity; TR-069/NETCONF/NSO =
-   adapters.
+  adapters.
 
 ## How we work
 
@@ -100,9 +108,10 @@ Complexity Tracking section and be approved before implementation.
 - ✅ Spec Kit + Git extension installed
 - ✅ GARD seed material imported (`gard-speckit-start/`)
 - ⏭️ Next: first feature spec — the MVP vertical slice from
-  [`gard-speckit-start/specs/04-mvp-scope.md`](gard-speckit-start/specs/04-mvp-scope.md)
+`[gard-speckit-start/specs/04-mvp-scope.md](gard-speckit-start/specs/04-mvp-scope.md)`
 
 ## North star
 
 > No device left unknown. No firmware left unmanaged. No uplift without
 > readiness.
+
