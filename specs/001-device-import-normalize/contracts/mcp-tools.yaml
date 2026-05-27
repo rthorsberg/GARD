@@ -1,0 +1,182 @@
+# MCP tool contracts shipped in F1.
+#
+# Every tool flows through the same OIDC/JWT auth, the same RBAC middleware,
+# and the same audit pipeline as the REST API (Constitution VI). Outputs are
+# bounded and paginated; no tool exposes raw SQL, shell, filesystem, or
+# unrestricted device-management access.
+#
+# Each tool's input schema is JSON Schema 2020-12. Output schemas are the
+# same shape as the corresponding REST endpoint, minus internal fields,
+# so MCP clients can pivot to the REST API for deeper queries.
+
+server:
+  name: gard-mcp
+  version: 0.1.0
+  transport: streamable-http
+  endpoint: /mcp
+  authentication: bearer_jwt   # validated by the same dependency as REST
+  rate_limit:
+    per_token_per_minute: 600  # default; tunable per token
+
+permissions:
+  list_devices:
+    - read_device_lifecycle
+  get_device_lifecycle_status:
+    - read_device_lifecycle
+
+tools:
+
+  - name: list_devices
+    summary: |
+      List canonical devices known to GARD. Paginated. Read-only.
+      The bounded shape matches the REST /devices endpoint.
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        vendor_normalized: { type: string }
+        model_normalized: { type: string }
+        site: { type: string }
+        region: { type: string }
+        lifecycle_state:
+          type: string
+          enum:
+            - imported
+            - classified
+            - target_defined
+            - compliant
+            - outside_target
+            - ready_for_uplift
+            - blocked
+            - uplift_planned
+            - approval_pending
+            - approved
+            - uplift_queued
+            - uplift_in_progress
+            - uplift_completed
+            - validated
+            - failed
+            - rollback_required
+            - exception_approved
+            - retirement_candidate
+            - retired
+            - unknown
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+        page_token:
+          type: string
+    output_schema:
+      type: object
+      required: [items, correlation_id]
+      properties:
+        items:
+          type: array
+          maxItems: 500
+          items:
+            $ref: "#/definitions/DeviceCard"
+        next_page_token:
+          type: ["string", "null"]
+        correlation_id: { type: string }
+    audit:
+      action: mcp.tool.invoked
+      records_returned: ${ output.items.length }
+      mutates: false
+
+  - name: get_device_lifecycle_status
+    summary: |
+      Return the canonical lifecycle status for one device, including the
+      explainable response envelope (state, summary, reasons, confidence).
+    input_schema:
+      type: object
+      additionalProperties: false
+      required: [device_ref]
+      properties:
+        device_ref:
+          oneOf:
+            - { type: object, required: [id], properties: { id: { type: string, format: uuid } } }
+            - { type: object, required: [serial_number], properties: { serial_number: { type: string } } }
+            - { type: object, required: [hostname, site], properties: { hostname: { type: string }, site: { type: string } } }
+    output_schema:
+      type: object
+      required: [device, envelope, correlation_id]
+      properties:
+        device:
+          $ref: "#/definitions/DeviceCard"
+        latest_observation:
+          oneOf:
+            - { type: "null" }
+            - { $ref: "#/definitions/ObservationCard" }
+        envelope:
+          $ref: "#/definitions/Envelope"
+        correlation_id: { type: string }
+    audit:
+      action: mcp.tool.invoked
+      records_returned: 1
+      mutates: false
+
+definitions:
+
+  DeviceCard:
+    type: object
+    properties:
+      id: { type: string, format: uuid }
+      serial_number: { type: ["string", "null"] }
+      hostname: { type: string }
+      site: { type: string }
+      region: { type: ["string", "null"] }
+      vendor_normalized: { type: ["string", "null"] }
+      model_normalized: { type: ["string", "null"] }
+      platform_family: { type: ["string", "null"] }
+      lifecycle_state: { type: string }
+
+  ObservationCard:
+    type: object
+    properties:
+      id: { type: string, format: uuid }
+      observed_firmware: { type: ["string", "null"] }
+      observed_at: { type: string, format: date-time }
+      confidence:
+        type: string
+        enum: [exact, high, medium, low, manual_review_required]
+      confidence_source: { type: ["string", "null"] }
+
+  Envelope:
+    type: object
+    required: [state, summary, confidence]
+    properties:
+      state: { type: string }
+      summary: { type: string }
+      facts: { type: object }
+      reasons:
+        type: array
+        items: { type: string }
+      recommended_actions:
+        type: array
+        items: { type: string }
+      confidence:
+        type: string
+        enum: [exact, high, medium, low, manual_review_required, unknown]
+
+resources:
+  # MCP resources are read-only references discoverable by clients.
+  - uri: gard://schema/device
+    description: JSON schema of the DeviceCard
+  - uri: gard://schema/envelope
+    description: JSON schema of the explainable response envelope
+  - uri: gard://reports/manual-review-summary
+    description: Count of observations awaiting manual review, grouped by raw vendor
+
+disallowed:
+  # Explicit reminder of what F1 MCP MUST NOT do (Constitution VI + ADR-0003).
+  - execute firmware uplift
+  - approve wave or exception
+  - change target firmware
+  - upload firmware package
+  - override blockers
+  - delete records
+  - run arbitrary commands
+  - query raw SQL
+  - access the filesystem directly

@@ -1,0 +1,150 @@
+# Device-inventory CSV schema accepted by POST /api/v1/imports/devices/csv.
+#
+# Versioned and echoed in the response header X-Gard-Csv-Schema-Version.
+# UTF-8 only. Header row is required. Extra columns are preserved into
+# DeviceObservation.raw_payload but ignored for normalization.
+
+schema_version: "1.0.0"
+
+encoding: utf-8
+delimiter: ","
+quotechar: '"'
+header_row: required
+max_rows_per_request_sync: 10000   # boundary set by ADR-0009/D6
+allow_extra_columns: true
+case_sensitive_headers: false
+
+# Column declarations. `required: true` means the *column* must exist in the
+# header; an empty cell may still be permitted per `nullable`.
+columns:
+
+  - name: hostname
+    type: string
+    required: true
+    nullable: false
+    trim: true
+    description: Operator-meaningful device hostname.
+
+  - name: site
+    type: string
+    required: true
+    nullable: false
+    trim: true
+    description: Site / location identifier. Required for the (hostname, site) fallback identity.
+
+  - name: serial_number
+    type: string
+    required: true
+    nullable: true
+    trim: true
+    description: Vendor serial number. Optional but recommended; primary identity when present.
+
+  - name: vendor_raw
+    type: string
+    required: true
+    nullable: false
+    trim: true
+    description: Vendor as discovered (raw). Normalized by the rule engine.
+
+  - name: model_raw
+    type: string
+    required: true
+    nullable: false
+    trim: true
+    description: Model as discovered (raw). Normalized by the rule engine.
+
+  - name: platform_family_raw
+    type: string
+    required: false
+    nullable: true
+    trim: true
+    description: Optional hint at the platform family (e.g. "ios-xe"); used by rules.
+
+  - name: hardware_revision
+    type: string
+    required: false
+    nullable: true
+    trim: true
+
+  - name: management_ip
+    type: ipaddress
+    required: false
+    nullable: true
+    description: IPv4 or IPv6 management address.
+
+  - name: region
+    type: string
+    required: false
+    nullable: true
+    trim: true
+
+  - name: role
+    type: string
+    required: false
+    nullable: true
+    trim: true
+    description: Operational role (e.g. core, edge, bng).
+
+  - name: observed_firmware
+    type: string
+    required: true
+    nullable: true
+    trim: true
+    description: Observed firmware/software version string. Nullable because some legacy exports lack it; observations without firmware are still recorded.
+
+  - name: observed_bootloader
+    type: string
+    required: false
+    nullable: true
+    trim: true
+
+  - name: observed_at
+    type: datetime
+    required: false
+    nullable: true
+    format: rfc3339
+    description: When the actual state was observed. Defaults to import time if missing.
+
+# Row-level validation rules (post column parsing).
+row_validations:
+  - id: identity_present
+    description: Each row MUST carry serial_number OR (hostname AND site).
+    rule: "serial_number is not null OR (hostname is not null AND site is not null)"
+    error_code: ROW_MISSING_IDENTITY
+
+  - id: vendor_or_model_present
+    description: At least one of vendor_raw, model_raw must be non-empty.
+    rule: "len(vendor_raw) > 0 OR len(model_raw) > 0"
+    error_code: ROW_MISSING_VENDOR_AND_MODEL
+
+  - id: observed_at_not_far_future
+    description: observed_at must be <= now() + 5 minutes
+    rule: "observed_at is null OR observed_at <= now() + interval '5 minutes'"
+    error_code: ROW_OBSERVED_AT_FUTURE
+
+# Per-row error codes returned in the import report.
+error_codes:
+  ROW_ENCODING:               "Row failed UTF-8 decoding."
+  ROW_BAD_COLUMNS:            "Row column count does not match the header."
+  ROW_MISSING_IDENTITY:       "Row has neither serial_number nor (hostname, site)."
+  ROW_MISSING_VENDOR_AND_MODEL: "Row has empty vendor_raw and model_raw."
+  ROW_OBSERVED_AT_FUTURE:     "observed_at is more than 5 minutes in the future."
+  ROW_BAD_IPADDRESS:          "management_ip is not a valid IPv4/IPv6 address."
+  ROW_BAD_DATETIME:           "observed_at is not a valid RFC 3339 timestamp."
+  ROW_DUPLICATE_IN_FILE:      "Row collides with an earlier row on identity; later row wins for canonical Device, all rows recorded as observations."
+
+# Example
+example_row:
+  hostname: csp-edge-oslo-01
+  site: oslo-dc1
+  serial_number: FCW2345Q9LK
+  vendor_raw: Cisco Systems
+  model_raw: ISR1121-8P
+  platform_family_raw: ios-xe
+  hardware_revision: V01
+  management_ip: 10.20.30.40
+  region: NO
+  role: edge
+  observed_firmware: 17.09.04a
+  observed_bootloader: rom-monitor 17.07
+  observed_at: 2026-05-26T22:14:03Z

@@ -1,0 +1,664 @@
+openapi: 3.1.0
+info:
+  title: GARD REST API — F1 Device Import & Normalize
+  version: 0.1.0
+  description: |
+    Public REST surface delivered by feature F1 (device-import-normalize).
+    Every endpoint requires authentication (OIDC bearer for humans, signed
+    JWT for service/MCP clients). Every state-mutating endpoint produces
+    an AuditEvent. Every classification response carries the explainable
+    response envelope.
+
+    This file is the **human-curated contract**. The FastAPI app serves
+    a generated OpenAPI document at runtime; a CI check enforces that
+    the generated document is a superset of this contract.
+
+servers:
+  - url: https://{deployment}/api/v1
+    variables:
+      deployment:
+        default: gard.example.csp.invalid
+
+security:
+  - bearerOidc: []
+  - bearerApiToken: []
+
+tags:
+  - name: imports
+  - name: devices
+  - name: observations
+  - name: normalization
+  - name: audit
+  - name: evidence
+
+paths:
+  /imports/devices/csv:
+    post:
+      tags: [imports]
+      summary: Upload a device-inventory CSV for ingest
+      description: |
+        Accepts a UTF-8 CSV file. Synchronous when row count ≤ the
+        configured threshold; otherwise returns 202 with a job id.
+        Re-upload of an identical file (by SHA-256) is refused by default;
+        `?override=true` (audited) bypasses the duplicate check.
+      parameters:
+        - in: query
+          name: override
+          required: false
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Import processed synchronously
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportSummary"
+        "202":
+          description: Large import accepted; poll job for status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJobAck"
+        "400":
+          description: Malformed file (encoding, schema, etc.)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Duplicate file hash and override not requested
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /imports/jobs/{id}:
+    get:
+      tags: [imports]
+      summary: Get an import job status
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportJob" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /imports/jobs/{id}/report:
+    get:
+      tags: [imports]
+      summary: Download per-row error/exception report for a job
+      responses:
+        "200":
+          description: Report (JSON)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportReport" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+
+  /devices:
+    get:
+      tags: [devices]
+      summary: List devices
+      parameters:
+        - in: query
+          name: vendor_normalized
+          schema: { type: string }
+        - in: query
+          name: model_normalized
+          schema: { type: string }
+        - in: query
+          name: site
+          schema: { type: string }
+        - in: query
+          name: region
+          schema: { type: string }
+        - in: query
+          name: lifecycle_state
+          schema:
+            type: string
+            enum: [imported, classified, target_defined, compliant, outside_target, ready_for_uplift, blocked, uplift_planned, approval_pending, approved, uplift_queued, uplift_in_progress, uplift_completed, validated, failed, rollback_required, exception_approved, retirement_candidate, retired, unknown]
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Paginated devices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceList" }
+
+  /devices/{id}:
+    get:
+      tags: [devices]
+      summary: Get a canonical device with its lifecycle envelope
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "200":
+          description: One device
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceWithEnvelope" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /observations:
+    get:
+      tags: [observations]
+      summary: List observations
+      parameters:
+        - in: query
+          name: device_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: import_job_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: confidence
+          schema:
+            type: string
+            enum: [exact, high, medium, low, manual_review_required]
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Paginated observations
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ObservationList" }
+
+  /observations/{id}/manual-mapping:
+    post:
+      tags: [observations]
+      summary: Manually classify an observation (highest precedence)
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vendor_normalized, model_normalized, reason]
+              properties:
+                vendor_normalized: { type: string }
+                model_normalized: { type: string }
+                platform_family: { type: string }
+                reason: { type: string, minLength: 4 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManualMapping" }
+        "409":
+          description: Mapping already exists (use disable + create new)
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /observations/re-evaluate:
+    post:
+      tags: [observations]
+      summary: Re-run normalization on a filtered set of observations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confidence:
+                  type: array
+                  items: { type: string, enum: [exact, high, medium, low, manual_review_required] }
+                device_id: { type: string, format: uuid }
+                import_job_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Re-evaluation summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_evaluated: { type: integer }
+                  changed: { type: integer }
+                  unchanged: { type: integer }
+                  newly_classified: { type: integer }
+                  remaining_manual_review: { type: integer }
+                  correlation_id: { type: string }
+
+  /normalization/rules:
+    get:
+      tags: [normalization]
+      summary: List normalization rules (file + DB)
+      responses:
+        "200":
+          description: All rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NormalizationRule" }
+    post:
+      tags: [normalization]
+      summary: Create a hot-override rule (source=db)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NormalizationRuleInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NormalizationRule" }
+
+  /normalization/rules/{id}:
+    patch:
+      tags: [normalization]
+      summary: Update a hot-override rule
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NormalizationRuleInput" }
+      responses:
+        "200":
+          description: Updated rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NormalizationRule" }
+    delete:
+      tags: [normalization]
+      summary: Disable a rule (cannot delete; file rules cannot be disabled via API)
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "204":
+          description: Disabled
+
+  /normalization/rules/reload:
+    post:
+      tags: [normalization]
+      summary: Reload file-backed rules from gard-catalog/normalization/
+      responses:
+        "200":
+          description: Reload report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  loaded: { type: integer }
+                  conflicts:
+                    type: array
+                    items: { type: string }
+
+  /normalization/rules/conflicts:
+    get:
+      tags: [normalization]
+      summary: List current rule conflicts (last load)
+      responses:
+        "200":
+          description: Conflicts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    rule_ids: { type: array, items: { type: string } }
+                    sample_inputs: { type: array, items: { type: object } }
+
+  /audit:
+    get:
+      tags: [audit]
+      summary: Query audit events
+      parameters:
+        - in: query
+          name: object_type
+          schema: { type: string }
+        - in: query
+          name: object_id
+          schema: { type: string }
+        - in: query
+          name: correlation_id
+          schema: { type: string }
+        - in: query
+          name: actor
+          schema: { type: string }
+        - in: query
+          name: since
+          schema: { type: string, format: date-time }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Paginated audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEvent" }
+                  next_page_token: { type: string, nullable: true }
+
+  /evidence:
+    get:
+      tags: [evidence]
+      summary: Query LifecycleEvidence records
+      parameters:
+        - in: query
+          name: subject_type
+          schema: { type: string }
+        - in: query
+          name: subject_id
+          schema: { type: string }
+        - in: query
+          name: evidence_type
+          schema:
+            type: string
+            enum: [import, manual_classification, evaluation, readiness, plan, approval, uplift_started, uplift_completed, validation, exception, retirement]
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Paginated evidence records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/LifecycleEvidence" }
+                  next_page_token: { type: string, nullable: true }
+
+components:
+  securitySchemes:
+    bearerOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer JWT issued by the deployment's OIDC provider
+    bearerApiToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Signed JWT issued by GARD for service / MCP clients
+
+  parameters:
+    PathId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    Limit:
+      in: query
+      name: limit
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    PageToken:
+      in: query
+      name: page_token
+      required: false
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Authenticated but missing the required permission
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, correlation_id]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object }
+        correlation_id: { type: string }
+
+    Envelope:
+      description: Explainable response envelope (Constitution V)
+      type: object
+      required: [state, summary, confidence]
+      properties:
+        state: { type: string }
+        summary: { type: string }
+        facts: { type: object }
+        reasons:
+          type: array
+          items: { type: string }
+        recommended_actions:
+          type: array
+          items: { type: string }
+        confidence:
+          type: string
+          enum: [exact, high, medium, low, manual_review_required, unknown]
+
+    ImportSummary:
+      type: object
+      required: [job_id, status, totals, correlation_id]
+      properties:
+        job_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [completed, failed]
+        totals:
+          type: object
+          properties:
+            rows_total: { type: integer }
+            rows_accepted: { type: integer }
+            rows_rejected: { type: integer }
+            rows_manual_review: { type: integer }
+            rows_duplicate: { type: integer }
+            devices_created: { type: integer }
+            devices_updated: { type: integer }
+        correlation_id: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+
+    ImportJobAck:
+      type: object
+      required: [job_id, status, correlation_id]
+      properties:
+        job_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [pending, processing]
+        poll_url: { type: string }
+        correlation_id: { type: string }
+
+    ImportJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        file_sha256: { type: string }
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, cancelled]
+        totals:
+          type: object
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        actor: { type: string }
+        is_override: { type: boolean }
+
+    ImportReport:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        row_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row_number: { type: integer }
+              code: { type: string }
+              message: { type: string }
+              raw_row: { type: object }
+
+    DeviceWithEnvelope:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        serial_number: { type: string, nullable: true }
+        hostname: { type: string }
+        site: { type: string }
+        region: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        vendor_raw: { type: string }
+        vendor_normalized: { type: string, nullable: true }
+        model_raw: { type: string }
+        model_normalized: { type: string, nullable: true }
+        platform_family: { type: string, nullable: true }
+        lifecycle_state: { type: string }
+        latest_observation_id: { type: string, format: uuid, nullable: true }
+        envelope: { $ref: "#/components/schemas/Envelope" }
+
+    DeviceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DeviceWithEnvelope" }
+        next_page_token: { type: string, nullable: true }
+
+    Observation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        import_job_id: { type: string, format: uuid }
+        observed_firmware: { type: string, nullable: true }
+        observed_at: { type: string, format: date-time }
+        confidence:
+          type: string
+          enum: [exact, high, medium, low, manual_review_required]
+        confidence_source: { type: string, nullable: true }
+        envelope: { $ref: "#/components/schemas/Envelope" }
+
+    ObservationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Observation" }
+        next_page_token: { type: string, nullable: true }
+
+    NormalizationRule:
+      type: object
+      properties:
+        id: { type: string }
+        priority: { type: integer }
+        match: { type: object }
+        output: { type: object }
+        confidence:
+          type: string
+          enum: [exact, high, medium]
+        source:
+          type: string
+          enum: [file, db]
+        source_path: { type: string, nullable: true }
+        enabled: { type: boolean }
+        notes: { type: string, nullable: true }
+
+    NormalizationRuleInput:
+      type: object
+      required: [id, match, output, confidence]
+      properties:
+        id: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,63}$" }
+        priority: { type: integer, default: 100 }
+        match: { type: object }
+        output: { type: object }
+        confidence:
+          type: string
+          enum: [exact, high, medium]
+        notes: { type: string }
+
+    ManualMapping:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        observation_id: { type: string, format: uuid }
+        vendor_normalized: { type: string }
+        model_normalized: { type: string }
+        platform_family: { type: string, nullable: true }
+        reason: { type: string }
+        actor: { type: string }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    AuditEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        actor: { type: string }
+        actor_type:
+          type: string
+          enum: [user, system, mcp_client, adapter]
+        action: { type: string }
+        object_type: { type: string }
+        object_id: { type: string }
+        before: { type: object, nullable: true }
+        after: { type: object, nullable: true }
+        result:
+          type: string
+          enum: [success, failure, denied]
+        correlation_id: { type: string }
+        source_ip: { type: string, nullable: true }
+        row_hash: { type: string }
+
+    LifecycleEvidence:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        evidence_type: { type: string }
+        subject_type: { type: string }
+        subject_id: { type: string }
+        before_state: { type: object, nullable: true }
+        after_state: { type: object, nullable: true }
+        actor: { type: string }
+        system: { type: string }
+        timestamp: { type: string, format: date-time }
+        source_checksum: { type: string, nullable: true }
+        references: { type: object, nullable: true }
+        row_hash: { type: string }
