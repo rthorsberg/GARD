@@ -1,0 +1,32 @@
+{
+  "tools": [
+    {
+      "name": "count_devices_outside_target",
+      "description": "Count devices outside target firmware/software version.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "vendor": {"type": "string"},
+          "model": {"type": "string"},
+          "region": {"type": "string"},
+          "site": {"type": "string"}
+        },
+        "required": ["vendor", "model"]
+      }
+    },
+    {
+      "name": "explain_blockers",
+      "description": "Explain why selected devices are not ready for uplift.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "vendor": {"type": "string"},
+          "model": {"type": "string"},
+          "region": {"type": "string"},
+          "only_blocking": {"type": "boolean"}
+        },
+        "required": ["vendor", "model"]
+      }
+    }
+  ]
+}

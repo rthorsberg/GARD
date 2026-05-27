@@ -1,0 +1,34 @@
+firmware_targets:
+  - vendor: Cisco
+    platform_family: ISR1100
+    model: ISR1121
+    hardware_revision: "*"
+    region: "*"
+    role: "*"
+    target_version: 17.12.4
+    approved_versions:
+      - 17.9.5
+      - 17.12.4
+    deprecated_versions:
+      - 16.9.5
+      - 16.12.8
+    blocked_versions:
+      - 16.6.1
+    status: approved
+    owner: network-lifecycle
+
+  - vendor: Cisco
+    platform_family: Catalyst9000
+    model: C9300-48P
+    hardware_revision: "*"
+    region: "*"
+    role: Access
+    target_version: 17.12.4
+    approved_versions:
+      - 17.9.5
+      - 17.12.4
+    deprecated_versions:
+      - 16.12.8
+    blocked_versions: []
+    status: approved
+    owner: network-lifecycle

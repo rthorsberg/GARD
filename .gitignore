@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE local state
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Source archives (kept extracted in-tree)
+gard-speckit-start.zip
+*.tmp
+*.log
+
+# Python (in case we add tooling later)
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+
+# Node (in case we add tooling later)
+node_modules/

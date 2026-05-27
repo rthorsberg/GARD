@@ -1,0 +1,30 @@
+prerequisite_rules:
+  - vendor: Cisco
+    model: ISR1121
+    target_version: 17.12.4
+    rule_type: required_config_backup
+    rule_value:
+      required: true
+    severity: blocking
+    blocking: true
+    description: Config backup must exist before uplift.
+
+  - vendor: Cisco
+    model: ISR1121
+    target_version: 17.12.4
+    rule_type: minimum_free_storage
+    rule_value:
+      minimum_mb: 1500
+    severity: blocking
+    blocking: true
+    description: Device must have enough local storage for firmware image.
+
+  - vendor: Cisco
+    model: ISR1121
+    target_version: 17.12.4
+    rule_type: required_package_checksum_verified
+    rule_value:
+      required: true
+    severity: blocking
+    blocking: true
+    description: Firmware image checksum must be verified and approved.

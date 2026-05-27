@@ -1,0 +1,5 @@
+hostname,management_ip,vendor,model,hardware_revision,serial_number,site,region,role,current_firmware,current_bootloader,last_discovered_at
+r-osl-001,10.10.1.1,Cisco,ISR1121,V02,FOC123456,Oslo,NO,CPE-Aggregation,16.9.5,16.12,2026-05-20T10:00:00Z
+sw-osl-022,10.10.2.22,Cisco,C9300-48P,V02,FCW987654,Oslo,NO,Access,17.9.5,17.9,2026-05-20T10:05:00Z
+agg-cph-014,10.30.3.14,Nokia,7750 SR-7,B,NSR112233,Copenhagen,DK,Aggregation,22.10.R1,,2026-05-20T10:10:00Z
+cpe-trd-009,10.40.4.9,Zyxel,NR5313,A1,ZYX998877,Trondheim,NO,CPE,sota-83100.1000.00.01.03.15,,2026-05-20T10:12:00Z

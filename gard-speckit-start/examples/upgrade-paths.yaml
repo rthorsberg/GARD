@@ -1,0 +1,22 @@
+upgrade_paths:
+  - vendor: Cisco
+    model: ISR1121
+    from_version_pattern: "16.9.*"
+    to_version: 17.12.4
+    intermediate_versions:
+      - 16.12.8
+      - 17.9.5
+      - 17.12.4
+    required_packages:
+      - isr1100-universalk9.16.12.08.bin
+      - isr1100-universalk9.17.09.05.bin
+      - isr1100-universalk9.17.12.04.bin
+
+  - vendor: Cisco
+    model: ISR1121
+    from_version_pattern: "17.9.*"
+    to_version: 17.12.4
+    intermediate_versions:
+      - 17.12.4
+    required_packages:
+      - isr1100-universalk9.17.12.04.bin
