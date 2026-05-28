@@ -454,22 +454,52 @@ components:
         correlation_id: { type: string }
 
     Envelope:
-      description: Explainable response envelope (Constitution V)
+      description: |
+        Explainable response envelope (Constitution V; ADR-0005). Every
+        derived/classification response is wrapped in this object.
       type: object
       required: [state, summary, confidence]
+      additionalProperties: true
       properties:
-        state: { type: string }
+        state:
+          type: string
+          enum: [known, unknown, conflicting, stale, classified, imported]
         summary: { type: string }
         facts: { type: object }
         reasons:
           type: array
-          items: { type: string }
+          items: { $ref: "#/components/schemas/EnvelopeReason" }
         recommended_actions:
           type: array
           items: { type: string }
         confidence:
+          # Numeric score in [0, 1]. Map to qualitative levels via
+          # gard.core.envelope.confidence_from_level.
+          type: number
+          minimum: 0
+          maximum: 1
+        as_of: { type: string, format: date-time }
+        correlation_id:
           type: string
-          enum: [exact, high, medium, low, manual_review_required, unknown]
+          nullable: true
+
+    EnvelopeReason:
+      type: object
+      required: [kind]
+      additionalProperties: true
+      properties:
+        kind:
+          type: string
+          enum:
+            - rule_match
+            - manual_mapping
+            - evidence_ref
+            - missing_input
+            - rule_conflict
+            - stale_observation
+            - policy_decision
+        ref: { type: string, nullable: true }
+        detail: { type: string }
 
     ImportSummary:
       type: object
