@@ -26,8 +26,8 @@ read on.
 | CSV schema | [`contracts/csv-schema.yaml`](./contracts/csv-schema.yaml) | 2026-05-27 | Versioned CSV ingest schema + row validations + error vocabulary |
 | Rule schema | [`contracts/normalization-rule.schema.yaml`](./contracts/normalization-rule.schema.yaml) | 2026-05-27 | JSON Schema 2020-12 for catalog + DB override rules |
 | Quickstart | [`quickstart.md`](./quickstart.md) | 2026-05-27 | 10-step operator walkthrough mapped to every SC-00x |
-| Tasks | [`tasks.md`](./tasks.md) | 2026-05-28 | 132 tasks across 6 phases; MVP at end of Phase 3; T131 (TLS) + T132 (token TTL) added in Polish |
-| **Implementation** | `gard/`, `gard-catalog/`, `tests/`, `adr/`, `deploy/` | — | **Not started yet** — kicks off on `/speckit-implement` |
+| Tasks | [`tasks.md`](./tasks.md) | 2026-05-28 | 132 tasks across 6 phases; **82/132 done** (Phase 1+2+3 = MVP); MVP green |
+| **Implementation** | `gard/`, `gard-catalog/`, `tests/`, `adr/`, `deploy/` | 2026-05-28 | **MVP green: 47/47 tests pass on Postgres 16; ruff + mypy strict clean on 59 source files; CSV import → classified Devices end-to-end with audit + evidence + envelope** |
 
 ## Timeline
 
@@ -63,6 +63,58 @@ new bullet whenever the feature meaningfully changes.
   T132 (token TTL contract test) added to Phase 6. Remaining findings
   (FR-005 retention enforcement, SC-002 automated gate, T118 ordering
   smell) tracked under "Known follow-ups" below.
+- **2026-05-28 (autonomous run, evening → night)** —
+  `/speckit-implement` autonomous execution delivered Phase 1 + Phase 2
+  + Phase 3 (MVP).
+  - **Phase 1 (T001-T013)**: pyproject.toml on Python 3.12, ruff +
+    mypy strict + pytest config, CI workflow with Postgres 16 service,
+    structured-JSON logging with correlation-id contextvar,
+    multi-stage Dockerfile + docker-compose, seed catalog (5 vendors),
+    ADRs 0006-0010 capturing research.md D1-D5.
+  - **Phase 2 (T014-T054)**: two-revision Alembic bootstrap with
+    role-based append-only enforcement (gard_app + gard_writer_append_only,
+    GRANT/REVOKE on audit_events, lifecycle_evidence,
+    device_observations); SQLAlchemy 2 typed-mapped ORM for all 8
+    entities; auth (OIDC issuer reservation + signed-JWT service
+    tokens with revocation); RBAC catalog + require(permission)
+    dependency that audit-emits auth.denied; canonical-JSON SHA-256
+    audit/evidence emitters; explainable response envelope (numeric
+    confidence in [0,1] + structured Reason objects); FastAPI app
+    factory with correlation-id middleware, contract-stable Error
+    envelope, health/audit/evidence/admin-tokens routers; daily
+    audit-chain seal worker. **15 contract + integration tests green
+    against live Postgres**.
+  - **Phase 3 / US1 (T055-T082)**: streaming UTF-8 CSV reader with
+    stable error-code vocabulary; identity resolution
+    (serial-first → hostname+site fallback); YAML catalog loader; tier-aware
+    normalization engine (manual → DB → file) with specificity +
+    deterministic tiebreaks; device upsert with imported→classified
+    transition; sync import controller with sha256 dedup, per-row
+    outcome tracking, audit + evidence emission; `/imports/devices/csv`,
+    `/imports/jobs/{id}`, `/imports/jobs/{id}/report` and
+    `/devices`, `/devices/{id}` routers with envelope; `gard catalog
+    reload` CLI; FastAPI lifespan auto-loads catalog on startup.
+    **23 additional contract + integration tests green** covering
+    US1-AS1 (clean import), US1-AS2 (mixed), US1-AS3 (re-import update),
+    duplicate-file 409 + override path, evidence (SC-007), audit
+    correlation (SC-006), counter-invariant
+    (`total = accepted + rejected + manual_review + duplicate`).
+- **2026-05-28 (post-MVP critical review)** — Self-review identified
+  five issues; all fixed and locked in with regression tests:
+  1. Counter arithmetic: in-file duplicates were double-counted as
+     accepted *and* duplicate, breaking the contract's invariant.
+  2. Duplicate-file race: two concurrent uploads of the same SHA could
+     both pass the pre-check then collide on the partial unique index
+     → 500. Now caught and converted to 409.
+  3. Device envelope confidence was hard-coded; now reads the latest
+     observation's confidence (`exact`/`high`/`medium` map to
+     `1.0`/`0.85`/`0.6`) and cites the matching rule id.
+  4. Production env now refuses to start unless
+     `GARD_DATABASE_URL_APPEND_ONLY` is set to a *distinct* DSN
+     connecting as `gard_writer_append_only` (ADR-0009).
+  5. FastAPI lifespan event handler bootstraps the catalog on app
+     start (best-effort; failures logged, do not block startup).
+  **Final state: 47/47 tests pass; ruff + mypy strict clean.**
 
 ## Scope guards
 

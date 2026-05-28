@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from gard.api.middleware.correlation_id import CorrelationIdMiddleware
@@ -16,6 +19,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     s.validate_for_env()
     configure_logging(level=s.log_level, service_name=s.service_name, env=s.env)
 
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Best-effort catalog reload on app boot. Failures are logged but
+        # do not block startup.
+        from gard.catalog.normalization_loader import load_catalog
+        from gard.core.logging import get_logger
+        from gard.db.session import session_scope
+
+        log = get_logger(__name__)
+        try:
+            with session_scope() as session:
+                report = load_catalog(session, s.catalog_root)
+            log.info(
+                "catalog.bootstrap",
+                loaded=report.loaded,
+                skipped=report.skipped,
+                errors=len(report.errors),
+            )
+        except Exception as exc:  # pragma: no cover - DB may be down at boot
+            log.warning("catalog.bootstrap_failed", error=str(exc))
+        yield
+
     app = FastAPI(
         title="GARD",
         version=s.version,
@@ -23,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url=None,
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
 
     # Order matters: correlation id wraps everything so logs and error

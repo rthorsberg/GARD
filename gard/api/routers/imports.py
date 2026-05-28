@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from gard.api.middleware.rbac import require
@@ -56,14 +57,27 @@ async def upload_csv(
                 detail=f"duplicate file (sha256={sha}); pass override=true to force re-import",
             )
 
-    summary = run_sync_import(
-        session=session,
-        audit_session=audit_session,
-        actor=principal.subject,
-        filename=file.filename or "upload.csv",
-        data=data,
-        is_override=override,
-    )
+    try:
+        summary = run_sync_import(
+            session=session,
+            audit_session=audit_session,
+            actor=principal.subject,
+            filename=file.filename or "upload.csv",
+            data=data,
+            is_override=override,
+        )
+    except IntegrityError as exc:
+        # Two concurrent uploads of the same file body raced past
+        # find_existing_job() and both reached the partial unique index.
+        # Rollback our session and convert to a deterministic 409 so the
+        # client sees the same failure shape as the pre-check path.
+        session.rollback()
+        if "uq_import_jobs_file_sha256" in str(exc.orig):
+            raise HTTPException(
+                status_code=409,
+                detail=f"duplicate file (sha256={sha}); pass override=true to force re-import",
+            ) from exc
+        raise
     audit_session.commit()
     return summary
 

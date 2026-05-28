@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from gard.api.middleware.rbac import require
@@ -13,7 +14,7 @@ from gard.core import device_controller
 from gard.core.envelope import Reason, build_envelope, confidence_from_level
 from gard.core.rbac import Permission, Principal
 from gard.db.session import get_session
-from gard.models import Device
+from gard.models import Device, DeviceObservation
 from gard.models._enums import LifecycleState
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
@@ -41,24 +42,43 @@ def _to_facts(d: Device) -> DeviceFacts:
     )
 
 
-def _envelope_for(d: Device) -> DeviceWithEnvelope:
+def _envelope_for(d: Device, session: Session) -> DeviceWithEnvelope:
     facts = _to_facts(d)
+    latest = session.scalar(
+        select(DeviceObservation)
+        .where(DeviceObservation.device_id == d.id)
+        .order_by(DeviceObservation.created_at.desc())
+        .limit(1)
+    )
+
     if d.lifecycle_state == LifecycleState.classified:
         state = "classified"
         summary = (
             f"{d.vendor_normalized or d.vendor_raw} {d.model_normalized or d.model_raw} "
             f"@ {d.hostname}/{d.site}"
         )
-        reasons = [
-            Reason(
-                kind="evidence_ref",
-                ref=f"device:{d.id}",
-                detail="latest observation drove the canonical vendor/model.",
-            )
-        ]
+        if latest is not None and latest.confidence_source:
+            reasons = [
+                Reason(
+                    kind="rule_match",
+                    ref=latest.confidence_source,
+                    detail=f"latest observation classified by {latest.confidence_source}",
+                )
+            ]
+        else:
+            reasons = [
+                Reason(
+                    kind="evidence_ref",
+                    ref=f"device:{d.id}",
+                    detail="latest observation drove the canonical vendor/model.",
+                )
+            ]
+        # Confidence comes from the latest observation, not a hard-coded
+        # heuristic. This keeps the envelope honest when the catalog
+        # claims `medium` rather than `high`.
         confidence = (
-            confidence_from_level("high")
-            if d.vendor_normalized
+            confidence_from_level(latest.confidence.value)
+            if latest is not None
             else confidence_from_level("medium")
         )
     else:
@@ -104,7 +124,7 @@ def list_(
         lifecycle_state=lifecycle_state,
         limit=limit,
     )
-    items = [_envelope_for(r) for r in rows]
+    items = [_envelope_for(r, session) for r in rows]
     return DeviceList(items=items, total_returned=len(items))
 
 
@@ -117,4 +137,4 @@ def get_(
     d = device_controller.get_device(session, device_id)
     if d is None:
         raise HTTPException(status_code=404, detail="device not found")
-    return _envelope_for(d)
+    return _envelope_for(d, session)

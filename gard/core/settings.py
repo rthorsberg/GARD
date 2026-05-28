@@ -97,6 +97,8 @@ class Settings(BaseSettings):
         Called once at app startup. Tests bypass by using env="dev" or "test".
         """
         if self.env == "prod":
+            import os
+
             if self.jwt_secret == _DEV_JWT_SECRET:
                 raise RuntimeError("GARD_JWT_SECRET must be set in production")
             if not self.require_tls:
@@ -104,6 +106,16 @@ class Settings(BaseSettings):
             if self.oidc_issuer is None or self.oidc_audience is None:
                 raise RuntimeError(
                     "GARD_OIDC_ISSUER and GARD_OIDC_AUDIENCE are required in production"
+                )
+            # ADR-0009: append-only audit/evidence writes MUST go through a
+            # dedicated DB role with INSERT/SELECT only. In prod we refuse
+            # to start when the two DSNs collapse onto the same user.
+            ao_dsn = os.environ.get("GARD_DATABASE_URL_APPEND_ONLY")
+            if not ao_dsn or ao_dsn == self.database_url:
+                raise RuntimeError(
+                    "GARD_DATABASE_URL_APPEND_ONLY must be set to a distinct "
+                    "DSN connecting as gard_writer_append_only in production "
+                    "(ADR-0009)"
                 )
 
 
