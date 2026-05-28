@@ -83,6 +83,37 @@ add, remove, or rename ADRs.
   add follow-up items discovered, and adjust the dependency graph if
   reality diverged.
 
+## Per-feature README convention
+
+Every feature directory under `specs/` MUST contain a `README.md` next to
+its `spec.md`. The per-feature README is the **navigation + changelog**
+for that feature — it complements but does not replace the formal
+artifacts. Required sections:
+
+1. **TL;DR** — what the feature delivers, in 2 sentences
+2. **Status** — table of artifacts (spec, plan, research, data-model,
+   contracts, quickstart, tasks, implementation) with the latest update
+   date and a one-line summary
+3. **Timeline** — dated bullets logging significant decisions and events
+   (spec drafted, clarifications run, plan added, ADRs reserved, tasks
+   generated, PRs opened/merged, scope changes)
+4. **Scope guards** — what IS in this feature, what is NOT (with the
+   feature that picks up each cut item), and any cross-cutting changes
+   it caused elsewhere in the project
+5. **ADRs born in this feature** — table of ADRs proposed or accepted
+   during the feature, with status and source-decision reference
+6. **Pull requests** — links to all PRs that touched this feature, in
+   chronological order
+7. **How to run / verify** — one paragraph linking to `quickstart.md`
+8. **Related references** — links to the constitution, roadmap, and
+   any seed material the feature was built on
+
+The `/speckit-specify` flow scaffolds a stub README; subsequent
+`/speckit-plan`, `/speckit-tasks`, `/speckit-implement`, and
+`/speckit-clarify` runs MUST append a Timeline bullet and update the
+Status table for the artifact they touched. The first canonical example
+is [`specs/001-device-import-normalize/README.md`](./specs/001-device-import-normalize/README.md).
+
 ## Current status
 
 | Feature | Branch | Spec | Plan | Tasks | Implementation | Status |
