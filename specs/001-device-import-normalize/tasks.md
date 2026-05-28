@@ -39,62 +39,62 @@
 
 ### Database & migrations
 
-- [ ] T014 Initialize Alembic in `gard/db/migrations/`, configure `alembic.ini` to read DSN from settings; create the bootstrap migration that provisions the two PostgreSQL roles `gard_app` (full INSERT/UPDATE/SELECT on regular tables) and `gard_writer_append_only` (INSERT/SELECT only)
-- [ ] T015 [P] Alembic migration: `devices` table per data-model.md, with the two partial unique indexes on `lower(serial_number)` and on `(lower(hostname), lower(site))`, owned by `gard_app`, in `gard/db/migrations/versions/0002_devices.py`
-- [ ] T016 [P] Alembic migration: `device_observations` table with JSONB `raw_payload`, GIN index, and grants restricted to `gard_writer_append_only` (REVOKE UPDATE, DELETE from `gard_app`), in `gard/db/migrations/versions/0003_device_observations.py`
-- [ ] T017 [P] Alembic migration: `normalization_rules` table with `(source, source_path, id)` constraints, in `gard/db/migrations/versions/0004_normalization_rules.py`
-- [ ] T018 [P] Alembic migration: `manual_mappings` table with unique `(observation_id)`, in `gard/db/migrations/versions/0005_manual_mappings.py`
-- [ ] T019 [P] Alembic migration: `import_jobs` table with partial unique on `file_sha256` where `is_override = false`, in `gard/db/migrations/versions/0006_import_jobs.py`
-- [ ] T020 [P] Alembic migration: `audit_events` + `audit_chain_heads` tables, both with append-only grants, in `gard/db/migrations/versions/0007_audit.py`
-- [ ] T021 [P] Alembic migration: `lifecycle_evidence` table with append-only grants, in `gard/db/migrations/versions/0008_lifecycle_evidence.py`
-- [ ] T022 [P] Alembic migration: `api_tokens` table, in `gard/db/migrations/versions/0009_api_tokens.py`
+- [X] T014 Initialize Alembic in `gard/db/migrations/`, configure `alembic.ini` to read DSN from settings; create the bootstrap migration that provisions the two PostgreSQL roles `gard_app` (full INSERT/UPDATE/SELECT on regular tables) and `gard_writer_append_only` (INSERT/SELECT only)
+- [X] T015 [P] Alembic migration: `devices` table per data-model.md, with the two partial unique indexes on `lower(serial_number)` and on `(lower(hostname), lower(site))`, owned by `gard_app`, in `gard/db/migrations/versions/0002_devices.py`
+- [X] T016 [P] Alembic migration: `device_observations` table with JSONB `raw_payload`, GIN index, and grants restricted to `gard_writer_append_only` (REVOKE UPDATE, DELETE from `gard_app`), in `gard/db/migrations/versions/0003_device_observations.py`
+- [X] T017 [P] Alembic migration: `normalization_rules` table with `(source, source_path, id)` constraints, in `gard/db/migrations/versions/0004_normalization_rules.py`
+- [X] T018 [P] Alembic migration: `manual_mappings` table with unique `(observation_id)`, in `gard/db/migrations/versions/0005_manual_mappings.py`
+- [X] T019 [P] Alembic migration: `import_jobs` table with partial unique on `file_sha256` where `is_override = false`, in `gard/db/migrations/versions/0006_import_jobs.py`
+- [X] T020 [P] Alembic migration: `audit_events` + `audit_chain_heads` tables, both with append-only grants, in `gard/db/migrations/versions/0007_audit.py`
+- [X] T021 [P] Alembic migration: `lifecycle_evidence` table with append-only grants, in `gard/db/migrations/versions/0008_lifecycle_evidence.py`
+- [X] T022 [P] Alembic migration: `api_tokens` table, in `gard/db/migrations/versions/0009_api_tokens.py`
 
 ### SQLAlchemy ORM models
 
-- [ ] T023 [P] `gard/models/__init__.py` with declarative base + UUID v7 server-side default function
-- [ ] T024 [P] `gard/models/device.py` matching data-model.md
-- [ ] T025 [P] `gard/models/observation.py` (DeviceObservation) — read access via `gard_app`, writes via `gard_writer_append_only`
-- [ ] T026 [P] `gard/models/normalization_rule.py`
-- [ ] T027 [P] `gard/models/manual_mapping.py`
-- [ ] T028 [P] `gard/models/import_job.py`
-- [ ] T029 [P] `gard/models/audit_event.py` + `audit_chain_head.py` in same file
-- [ ] T030 [P] `gard/models/lifecycle_evidence.py`
-- [ ] T031 [P] `gard/models/api_token.py`
-- [ ] T032 `gard/db/session.py`: two SQLAlchemy engines (`engine_app`, `engine_append_only`) wired to the two DB roles; FastAPI dependency providers for both
+- [X] T023 [P] `gard/models/__init__.py` with declarative base + UUID v7 server-side default function
+- [X] T024 [P] `gard/models/device.py` matching data-model.md
+- [X] T025 [P] `gard/models/observation.py` (DeviceObservation) — read access via `gard_app`, writes via `gard_writer_append_only`
+- [X] T026 [P] `gard/models/normalization_rule.py`
+- [X] T027 [P] `gard/models/manual_mapping.py`
+- [X] T028 [P] `gard/models/import_job.py`
+- [X] T029 [P] `gard/models/audit_event.py` + `audit_chain_head.py` in same file
+- [X] T030 [P] `gard/models/lifecycle_evidence.py`
+- [X] T031 [P] `gard/models/api_token.py`
+- [X] T032 `gard/db/session.py`: two SQLAlchemy engines (`engine_app`, `engine_append_only`) wired to the two DB roles; FastAPI dependency providers for both
 
 ### Auth, RBAC, correlation, errors
 
-- [ ] T033 [P] `gard/api/middleware/correlation_id.py`: ASGI middleware that reads `X-Correlation-Id` header or generates a UUID v7, sets the contextvar, echoes header in response
-- [ ] T034 `gard/api/middleware/auth.py`: FastAPI dependency that validates OIDC bearer JWT (via `authlib`) or GARD-signed API-token JWT (via `python-jose`), returns a `Principal` (`subject`, `actor_type`, `roles`)
-- [ ] T035 [P] `gard/core/rbac.py`: role→permission catalog as a Python dict (roles `viewer`, `lifecycle_manager`, `mcp_client`, `system_admin`; permissions per the security spec, F1 subset)
-- [ ] T036 `gard/api/middleware/rbac.py`: `require(permission)` dependency factory that consults the catalog and the request's `Principal`; emits an `auth.denied` audit event on failure
-- [ ] T037 [P] `gard/api/middleware/errors.py`: exception handler that renders the `Error` schema from `contracts/rest-openapi.yaml` with `correlation_id` populated from the contextvar
+- [X] T033 [P] `gard/api/middleware/correlation_id.py`: ASGI middleware that reads `X-Correlation-Id` header or generates a UUID v7, sets the contextvar, echoes header in response
+- [X] T034 `gard/api/middleware/auth.py`: FastAPI dependency that validates OIDC bearer JWT (via `authlib`) or GARD-signed API-token JWT (via `python-jose`), returns a `Principal` (`subject`, `actor_type`, `roles`)
+- [X] T035 [P] `gard/core/rbac.py`: role→permission catalog as a Python dict (roles `viewer`, `lifecycle_manager`, `mcp_client`, `system_admin`; permissions per the security spec, F1 subset)
+- [X] T036 `gard/api/middleware/rbac.py`: `require(permission)` dependency factory that consults the catalog and the request's `Principal`; emits an `auth.denied` audit event on failure
+- [X] T037 [P] `gard/api/middleware/errors.py`: exception handler that renders the `Error` schema from `contracts/rest-openapi.yaml` with `correlation_id` populated from the contextvar
 
 ### Audit + Evidence + Envelope helpers
 
-- [ ] T038 `gard/core/audit.py`: `emit(action, object_type, object_id, before, after, result, principal)` helper that writes to `audit_events` via the append-only role, computes `row_hash` (SHA-256 of canonical JSON of all fields except `row_hash`), and references the `correlation_id` contextvar
-- [ ] T039 `gard/core/evidence.py`: `emit(evidence_type, subject_type, subject_id, before_state, after_state, source_checksum, references, principal)` helper writing to `lifecycle_evidence` with the same row-hash construction
-- [ ] T040 `gard/worker.py`: scaffolds the worker process; first responsibility is the daily checksum-chain sealing job (computes the chained hash over the previous UTC day's `audit_events` ordered by `(timestamp, id)`, writes to `audit_chain_heads`)
-- [ ] T041 [P] `gard/core/envelope.py`: `build_envelope(state, summary, facts, reasons, recommended_actions, confidence)` returning the explainable response envelope used by every classification response
+- [X] T038 `gard/core/audit.py`: `emit(action, object_type, object_id, before, after, result, principal)` helper that writes to `audit_events` via the append-only role, computes `row_hash` (SHA-256 of canonical JSON of all fields except `row_hash`), and references the `correlation_id` contextvar
+- [X] T039 `gard/core/evidence.py`: `emit(evidence_type, subject_type, subject_id, before_state, after_state, source_checksum, references, principal)` helper writing to `lifecycle_evidence` with the same row-hash construction
+- [X] T040 `gard/worker.py`: scaffolds the worker process; first responsibility is the daily checksum-chain sealing job (computes the chained hash over the previous UTC day's `audit_events` ordered by `(timestamp, id)`, writes to `audit_chain_heads`)
+- [X] T041 [P] `gard/core/envelope.py`: `build_envelope(state, summary, facts, reasons, recommended_actions, confidence)` returning the explainable response envelope used by every classification response
 
 ### App skeletons
 
-- [ ] T042 `gard/api/app.py`: FastAPI application factory wiring correlation-id middleware, error handler, auth dependency, and route registration; serves `/health`
-- [ ] T043 [P] `gard/api/routers/health.py`: `GET /health` returning `{"status":"ok","version":<gard.__version__>}` (no auth required)
-- [ ] T044 `gard/mcp/server.py`: MCP server using the official Python SDK with Streamable HTTP transport, mounted under `/mcp`, sharing the FastAPI auth dependency for bearer JWT validation; calls `audit.emit('mcp.tool.invoked', ...)` on every tool invocation
-- [ ] T045 [P] `gard/api/routers/admin_tokens.py`: `POST /api/v1/admin/tokens` (issue) and `POST /api/v1/admin/tokens/{id}/revoke` (revoke), both gated by `manage_mcp_tools` permission
-- [ ] T046 [P] `gard/api/routers/audit.py`: `GET /api/v1/audit` per the OpenAPI contract; gated by `read_audit` permission
-- [ ] T047 [P] `gard/api/routers/evidence.py`: `GET /api/v1/evidence` per the OpenAPI contract; gated by `read_evidence` permission
-- [ ] T048 `gard/__main__.py`: combined entrypoint (`uvicorn` for API + MCP in one process; `worker` subcommand starts `gard.worker`)
+- [X] T042 `gard/api/app.py`: FastAPI application factory wiring correlation-id middleware, error handler, auth dependency, and route registration; serves `/health`
+- [X] T043 [P] `gard/api/routers/health.py`: `GET /health` returning `{"status":"ok","version":<gard.__version__>}` (no auth required)
+- [X] T044 `gard/mcp/server.py`: MCP server using the official Python SDK with Streamable HTTP transport, mounted under `/mcp`, sharing the FastAPI auth dependency for bearer JWT validation; calls `audit.emit('mcp.tool.invoked', ...)` on every tool invocation
+- [X] T045 [P] `gard/api/routers/admin_tokens.py`: `POST /api/v1/admin/tokens` (issue) and `POST /api/v1/admin/tokens/{id}/revoke` (revoke), both gated by `manage_mcp_tools` permission
+- [X] T046 [P] `gard/api/routers/audit.py`: `GET /api/v1/audit` per the OpenAPI contract; gated by `read_audit` permission
+- [X] T047 [P] `gard/api/routers/evidence.py`: `GET /api/v1/evidence` per the OpenAPI contract; gated by `read_evidence` permission
+- [X] T048 `gard/__main__.py`: combined entrypoint (`uvicorn` for API + MCP in one process; `worker` subcommand starts `gard.worker`)
 
 ### Foundational contract & integration tests
 
-- [ ] T049 [P] Contract test `tests/contract/test_audit_append_only.py`: a transaction using the `gard_app` role attempting `UPDATE audit_events` MUST raise an insufficient-privilege error
-- [ ] T050 [P] Contract test `tests/contract/test_evidence_append_only.py`: same pattern for `lifecycle_evidence`
-- [ ] T051 [P] Contract test `tests/contract/test_envelope_schema.py`: `build_envelope(...)` output validates against the inline `Envelope` JSON schema extracted from `contracts/rest-openapi.yaml`
-- [ ] T052 [P] Contract test `tests/contract/test_correlation_id.py`: every response includes `X-Correlation-Id`; explicit incoming header is preserved
-- [ ] T053 [P] Integration test `tests/integration/test_audit_chain.py`: emit 5 audit events, run the chain-sealing job, verify chain head equals the manually-computed expected SHA-256
-- [ ] T054 [P] Integration test `tests/integration/test_auth_denied.py`: a request without a token returns 401; a token without the required permission returns 403 and creates an audit row with `result=denied`
+- [X] T049 [P] Contract test `tests/contract/test_audit_append_only.py`: a transaction using the `gard_app` role attempting `UPDATE audit_events` MUST raise an insufficient-privilege error
+- [X] T050 [P] Contract test `tests/contract/test_evidence_append_only.py`: same pattern for `lifecycle_evidence`
+- [X] T051 [P] Contract test `tests/contract/test_envelope_schema.py`: `build_envelope(...)` output validates against the inline `Envelope` JSON schema extracted from `contracts/rest-openapi.yaml`
+- [X] T052 [P] Contract test `tests/contract/test_correlation_id.py`: every response includes `X-Correlation-Id`; explicit incoming header is preserved
+- [X] T053 [P] Integration test `tests/integration/test_audit_chain.py`: emit 5 audit events, run the chain-sealing job, verify chain head equals the manually-computed expected SHA-256
+- [X] T054 [P] Integration test `tests/integration/test_auth_denied.py`: a request without a token returns 401; a token without the required permission returns 403 and creates an audit row with `result=denied`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel.
 
