@@ -99,6 +99,24 @@ new bullet whenever the feature meaningfully changes.
     duplicate-file 409 + override path, evidence (SC-007), audit
     correlation (SC-006), counter-invariant
     (`total = accepted + rejected + manual_review + duplicate`).
+- **2026-05-28 (Docker stack runs natively)** — `docker compose -f
+  deploy/docker-compose.yml up -d --build` is now a one-shot
+  bootstrap: a one-shot `migrate` service runs Alembic to head,
+  the `api` waits on `service_completed_successfully`, and the
+  FastAPI lifespan handler upserts all 5 vendor rules from
+  `gard-catalog/normalization/`. End-to-end smoke through the
+  stack (token issued in-container → CSV POST →
+  `GET /devices`) returns three `classified` devices with
+  envelope confidence `0.85` and the matching rule cited per
+  ADR-0005. Two small fixes shipped: the `alembic` and `uvicorn`
+  console scripts aren't installed in the slim runtime image,
+  so `entrypoint.sh` invokes them via `python -m`; and the
+  `Settings.catalog_root` default was `gard-catalog/` (the
+  parent), causing the lifespan loader to find zero rules — now
+  `gard-catalog/normalization/`. Host port for the API is
+  configurable via `GARD_API_HOST_PORT` (default 8080) so the
+  stack doesn't collide with whatever else owns `:8000`.
+  See `deploy/README.md` for the operator walkthrough.
 - **2026-05-28 (post-MVP critical review)** — Self-review identified
   five issues; all fixed and locked in with regression tests:
   1. Counter arithmetic: in-file duplicates were double-counted as

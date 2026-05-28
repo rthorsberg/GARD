@@ -76,8 +76,12 @@ class Settings(BaseSettings):
 
     # --- Catalog --------------------------------------------------------
     catalog_root: Path = Field(
-        default=Path("gard-catalog"),
-        description="Filesystem root of the version-controlled normalization catalog.",
+        default=Path("gard-catalog/normalization"),
+        description=(
+            "Filesystem root containing the version-controlled normalization "
+            "rule files (one rule per *.yaml). Sibling directories under "
+            "gard-catalog/ (e.g. schemas/) are intentionally excluded."
+        ),
     )
 
     # --- Limits ---------------------------------------------------------
