@@ -42,6 +42,13 @@ southbound execution adapters — GARD never replaces them.
 - **MCP** exposes curated, audited lifecycle tools to approved AI agents — never
 raw SQL or shell.
 
+GARD is **complementary** to **NetBox Assurance**, not a competitor: Assurance
+keeps NetBox documentation honest (inventory and configuration drift); GARD
+keeps the firmware/software lifecycle governed (target drift, readiness, uplift
+planning, evidence). Both sit on the same NetBox source-of-truth, which itself
+is typically populated by NetBox Discovery → NetBox Diode in modern
+deployments.
+
 See `[gard-speckit-start/adr/](gard-speckit-start/adr/)` for the binding
 architectural decisions.
 

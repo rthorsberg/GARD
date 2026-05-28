@@ -36,7 +36,7 @@
 | F4 | Readiness & Prerequisites | `readiness-prerequisites` | `ReadinessEvaluation` controller; prerequisite rule engine; transitions `outside_target → ready_for_uplift / blocked`. MCP tools: `get_readiness_summary`, `explain_blockers`. | F2, F3 |
 | F5 | Uplift Planning & Waves | `uplift-planning-waves` | `UpliftPlan` (dry-run only in v1); `UpliftWave` with approval gates; `Exception` entity; transitions `ready_for_uplift → uplift_planned → approval_pending → approved`. MCP tools: `create_uplift_wave_draft`, `create_exception_review_draft`, and the four reporting tools. | F3, F4 |
 | F6 | MVP Vertical Slice Validation | `mvp-vertical-slice-cisco-isr1121` | Reference end-to-end proof for Cisco ISR1121: all MVP acceptance criteria from `gard-speckit-start/specs/04-mvp-scope.md` checked green. Integration tests, sample data, runbook. Not new product code. | F1–F5 |
-| F7 | NetBox Integration (read-only) | `netbox-integration-read` | First-class NetBox identity reference per ADR-0001. Read-only in v1: GARD pulls device identity/inventory from NetBox and reconciles it with its own `Device` records. Write-back deferred to v2. | F1 |
+| F7 | NetBox Integration (read-only, ecosystem-aware) | `netbox-integration-read` | First-class NetBox identity reference per ADR-0001. Read-only in v1: GARD pulls device identity/inventory from NetBox via the standard NetBox REST API and reconciles it with its own `Device` records. Acknowledges that NetBox is typically fed by **NetBox Discovery → NetBox Diode** in modern deployments — GARD is a downstream consumer of NetBox-as-source-of-truth, **not** a Diode client (Diode is a write-into-NetBox path). Includes positioning vs. **NetBox Assurance**: Assurance handles inventory/config drift, GARD handles firmware/lifecycle drift; they are complementary on the same source-of-truth. Write-back to NetBox deferred to v2. Optional Diode-SDK adapter for sites where Diode is the only data plane is a post-v1 follow-up. | F1 |
 
 ## Out of v1 scope
 
@@ -67,6 +67,7 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0013 Prerequisite rule grammar** (during F4)
 - **ADR-0014 Plan vs wave lifecycle and approval data model** (during F5)
 - **ADR-0015 NetBox integration boundary & sync model** (during F7)
+- **ADR-0016 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
 
 This list is non-binding for the roadmap itself; each `/speckit-plan` may
 add, remove, or rename ADRs.
