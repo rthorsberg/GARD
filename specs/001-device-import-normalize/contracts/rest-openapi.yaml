@@ -375,7 +375,7 @@ paths:
           name: evidence_type
           schema:
             type: string
-            enum: [import, manual_classification, evaluation, readiness, plan, approval, uplift_started, uplift_completed, validation, exception, retirement]
+            enum: [import, manual_mapping, evaluation, readiness, plan, approval, uplift_started, uplift_completed, validation, exception, retirement]
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/PageToken"
       responses:
