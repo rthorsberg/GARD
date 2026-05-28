@@ -21,11 +21,23 @@ class NormalizationRule(Base):
     match: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     output: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     confidence: Mapped[Confidence] = mapped_column(
-        Enum(Confidence, name="rule_confidence", native_enum=False, length=32),
+        Enum(
+            Confidence,
+            name="rule_confidence",
+            native_enum=False,
+            length=32,
+            values_callable=lambda x: [m.value for m in Confidence],
+        ),
         nullable=False,
     )
     source: Mapped[RuleSource] = mapped_column(
-        Enum(RuleSource, name="rule_source", native_enum=False, length=8),
+        Enum(
+            RuleSource,
+            name="rule_source",
+            native_enum=False,
+            length=8,
+            values_callable=lambda x: [m.value for m in RuleSource],
+        ),
         nullable=False,
     )
     source_path: Mapped[str | None] = mapped_column(String, nullable=True)

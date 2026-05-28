@@ -4,12 +4,15 @@ platform: iosxr
 version: 1
 revision: 0
 priority: 110
+confidence: high
 match:
   any:
     - field: raw.os_string
       regex: '(?i)cisco\s+ios[\s-]?xr'
     - field: raw.snmp_sys_descr
       regex: '(?i)ios xr software'
+    - field: raw.model_raw
+      regex: '(?i)^(?:asr ?9|ncs|crs)'
 emit:
   vendor: cisco
   platform: iosxr

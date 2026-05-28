@@ -24,7 +24,13 @@ class AuditEvent(Base):
 
     actor: Mapped[str] = mapped_column(String, nullable=False)
     actor_type: Mapped[ActorType] = mapped_column(
-        Enum(ActorType, name="audit_actor_type", native_enum=False, length=16),
+        Enum(
+            ActorType,
+            name="audit_actor_type",
+            native_enum=False,
+            length=16,
+            values_callable=lambda x: [m.value for m in ActorType],
+        ),
         nullable=False,
     )
 
@@ -35,7 +41,13 @@ class AuditEvent(Base):
     before: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     after: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     result: Mapped[AuditResult] = mapped_column(
-        Enum(AuditResult, name="audit_result", native_enum=False, length=16),
+        Enum(
+            AuditResult,
+            name="audit_result",
+            native_enum=False,
+            length=16,
+            values_callable=lambda x: [m.value for m in AuditResult],
+        ),
         nullable=False,
     )
 

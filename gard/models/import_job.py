@@ -39,7 +39,13 @@ class ImportJob(Base):
     row_count_duplicate: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     status: Mapped[ImportStatus] = mapped_column(
-        Enum(ImportStatus, name="import_status", native_enum=False, length=16),
+        Enum(
+            ImportStatus,
+            name="import_status",
+            native_enum=False,
+            length=16,
+            values_callable=lambda x: [m.value for m in ImportStatus],
+        ),
         nullable=False,
         default=ImportStatus.pending,
     )

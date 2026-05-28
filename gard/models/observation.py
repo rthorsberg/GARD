@@ -32,7 +32,13 @@ class DeviceObservation(Base):
     observed_by: Mapped[str] = mapped_column(String, nullable=False)
 
     confidence: Mapped[Confidence] = mapped_column(
-        Enum(Confidence, name="observation_confidence", native_enum=False, length=32),
+        Enum(
+            Confidence,
+            name="observation_confidence",
+            native_enum=False,
+            length=32,
+            values_callable=lambda x: [m.value for m in Confidence],
+        ),
         nullable=False,
     )
     confidence_source: Mapped[str | None] = mapped_column(String, nullable=True)

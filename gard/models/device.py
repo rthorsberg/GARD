@@ -42,7 +42,13 @@ class Device(Base):
 
     source_system: Mapped[str] = mapped_column(String, nullable=False)
     lifecycle_state: Mapped[LifecycleState] = mapped_column(
-        Enum(LifecycleState, name="lifecycle_state", native_enum=False, length=32),
+        Enum(
+            LifecycleState,
+            name="lifecycle_state",
+            native_enum=False,
+            length=32,
+            values_callable=lambda x: [m.value for m in LifecycleState],
+        ),
         nullable=False,
         default=LifecycleState.imported,
     )

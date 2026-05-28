@@ -4,8 +4,11 @@ platform: eos
 version: 1
 revision: 0
 priority: 100
+confidence: high
 match:
   any:
+    - field: raw.vendor_raw
+      regex: '(?i)^arista(\s+networks)?$'
     - field: raw.os_string
       regex: '(?i)arista\b.*\beos\b|\beos\b.*arista'
     - field: raw.snmp_sys_descr
