@@ -15,10 +15,11 @@ services:
     volumes:
       - gard-pg:/var/lib/postgresql/data
 
-  api:
+  migrate:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+    image: gard-api:dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,10 +28,32 @@ services:
       GARD_DATABASE_URL: postgresql+psycopg://gard:gard@postgres:5432/gard
       GARD_REQUIRE_TLS: "false"
       GARD_JWT_SECRET: dev-secret-change-me
+    command: ["migrate"]
+    restart: "no"
+
+  api:
+    image: gard-api:dev
+    pull_policy: never
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      GARD_ENV: dev
+      GARD_DATABASE_URL: postgresql+psycopg://gard:gard@postgres:5432/gard
+      GARD_REQUIRE_TLS: "false"
+      GARD_JWT_SECRET: dev-secret-change-me
       GARD_LOG_LEVEL: DEBUG
     ports:
-      - "8000:8000"
+      - "${GARD_API_HOST_PORT:-8080}:8000"
     command: ["serve"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
 
 volumes:
   gard-pg: {}
