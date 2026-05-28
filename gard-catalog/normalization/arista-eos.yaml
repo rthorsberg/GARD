@@ -1,0 +1,19 @@
+schema_version: 1
+vendor: arista
+platform: eos
+version: 1
+revision: 0
+priority: 100
+match:
+  any:
+    - field: raw.os_string
+      regex: '(?i)arista\b.*\beos\b|\beos\b.*arista'
+    - field: raw.snmp_sys_descr
+      regex: '(?i)arista networks eos'
+emit:
+  vendor: arista
+  platform: eos
+  os_family: arista-eos
+  hardware_family_template: "${raw.model_id|lower}"
+  software_release_template: "${raw.os_version}"
+notes: Arista 7000-series running EOS.

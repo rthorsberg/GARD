@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          python-version: "3.12"
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Ruff lint
+        run: ruff check .
+      - name: Mypy
+        run: mypy gard
+
+  test:
+    name: pytest (Postgres ${{ matrix.pg }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ["16"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.pg }}
+        env:
+          POSTGRES_USER: gard
+          POSTGRES_PASSWORD: gard
+          POSTGRES_DB: gard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gard -d gard_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      GARD_DATABASE_URL: postgresql+psycopg://gard:gard@localhost:5432/gard_test
+      GARD_JWT_SECRET: ci-secret-do-not-use-in-prod
+      GARD_OIDC_ISSUER: https://example.invalid/
+      GARD_OIDC_AUDIENCE: gard-ci
+      GARD_API_TOKEN_TTL_SECONDS: "3600"
+      GARD_LOG_LEVEL: INFO
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          python-version: "3.12"
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+      - name: Migrate
+        run: alembic -c gard/db/alembic.ini upgrade head
+      - name: Run tests
+        run: pytest -q --cov=gard --cov-report=term-missing

@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gard
+      POSTGRES_PASSWORD: gard
+      POSTGRES_DB: gard
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gard -d gard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - gard-pg:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GARD_ENV: dev
+      GARD_DATABASE_URL: postgresql+psycopg://gard:gard@postgres:5432/gard
+      GARD_REQUIRE_TLS: "false"
+      GARD_JWT_SECRET: dev-secret-change-me
+      GARD_LOG_LEVEL: DEBUG
+    ports:
+      - "8000:8000"
+    command: ["serve"]
+
+volumes:
+  gard-pg: {}

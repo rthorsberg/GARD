@@ -1,0 +1,23 @@
+# Normalization rules for Cisco IOS / IOS-XE classic platforms.
+# Validated against gard-catalog/schemas/normalization-rule.schema.yaml at load time.
+schema_version: 1
+vendor: cisco
+platform: ios
+version: 1
+revision: 0
+priority: 100
+match:
+  any:
+    - field: raw.os_string
+      regex: '(?i)cisco\s+ios(?:\s+software)?'
+    - field: raw.snmp_sys_descr
+      regex: '(?i)cisco ios software'
+emit:
+  vendor: cisco
+  platform: ios
+  os_family: cisco-ios
+  hardware_family_template: "${raw.model_id|lower}"
+  software_release_template: "${raw.os_version}"
+notes: |
+  Covers traditional IOS, IOS XE 16.x+ (rel 16/17), Catalyst 9k running IOS-XE.
+  IOS-XR has its own rule.

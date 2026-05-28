@@ -1,0 +1,21 @@
+schema_version: 1
+vendor: cisco
+platform: iosxr
+version: 1
+revision: 0
+priority: 110
+match:
+  any:
+    - field: raw.os_string
+      regex: '(?i)cisco\s+ios[\s-]?xr'
+    - field: raw.snmp_sys_descr
+      regex: '(?i)ios xr software'
+emit:
+  vendor: cisco
+  platform: iosxr
+  os_family: cisco-iosxr
+  hardware_family_template: "${raw.model_id|lower}"
+  software_release_template: "${raw.os_version}"
+notes: |
+  Carrier-grade IOS-XR (ASR9k, NCS, CRS). Higher priority than ios.yaml so a
+  single observation that matches both falls into iosxr.

@@ -17,19 +17,19 @@
 
 **Purpose**: Initialize the repo skeleton, language toolchain, dev environment, and the ADRs that capture the binding decisions from `research.md`.
 
-- [ ] T001 Create source tree at repo root: `gard/{api,mcp,core,models,db,catalog}`, `gard-catalog/normalization/`, `tests/{contract,integration,unit}`, `deploy/`, `adr/` (with `__init__.py` where Python packages are needed)
-- [ ] T002 Create `pyproject.toml` at repo root pinning Python 3.12 with deps: `fastapi>=0.115`, `pydantic>=2.7`, `pydantic-settings`, `sqlalchemy>=2.0`, `alembic`, `psycopg[binary]`, `mcp`, `authlib`, `python-jose[cryptography]`, `structlog`, `httpx`, `uvicorn[standard]`; dev deps: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`, `freezegun`
-- [ ] T003 [P] Configure linters in `pyproject.toml`: ruff (line-length 100, target py312, full ruleset), mypy (strict), pytest (markers `contract`, `integration`, `unit`)
-- [ ] T004 [P] Create `.github/workflows/ci.yml`: matrix on Python 3.12, runs ruff → mypy → pytest with a Postgres 16 service container; uploads coverage
-- [ ] T005 [P] Create `gard/settings.py` using pydantic-settings, env-driven; documented keys: `GARD_DB_DSN`, `GARD_OIDC_DISCOVERY_URL`, `GARD_OIDC_AUDIENCE`, `GARD_JWT_SIGNING_KEY`, `GARD_CSV_SYNC_THRESHOLD` (default 10000), `GARD_LOG_LEVEL`
-- [ ] T006 [P] Create `gard/logging.py` configuring `structlog` with JSON output, ISO timestamps, and a `correlation_id` contextvar
-- [ ] T007 [P] Create `deploy/Dockerfile` (python:3.12-slim, multi-stage), `deploy/docker-compose.yml` (gard-api, gard-worker, gard-postgres), `deploy/.env.example`
-- [ ] T008 [P] Create initial `gard-catalog/normalization/cisco.yaml` with the rules shown in `contracts/normalization-rule.schema.yaml` example (cisco-isr-1121, cisco-catalyst-9300) plus `version: 1.0.0` header
-- [ ] T009 [P] Write `adr/ADR-0006-language-and-runtime.md` from research.md D1 (Python 3.12)
-- [ ] T010 [P] Write `adr/ADR-0007-database-and-migrations.md` from research.md D2 (PostgreSQL 16 + SQLAlchemy 2 + Alembic)
-- [ ] T011 [P] Write `adr/ADR-0008-auth-and-rbac.md` from research.md D3 (OIDC + signed-JWT API tokens, single FastAPI dependency)
-- [ ] T012 [P] Write `adr/ADR-0009-audit-and-evidence-storage.md` from research.md D4 (append-only DB roles + daily checksum chain)
-- [ ] T013 [P] Write `adr/ADR-0010-normalization-rules-format.md` from research.md D5 (YAML + DB override layer + 3-tier resolution)
+- [X] T001 Create source tree at repo root: `gard/{api,mcp,core,models,db,catalog}`, `gard-catalog/normalization/`, `tests/{contract,integration,unit}`, `deploy/`, `adr/` (with `__init__.py` where Python packages are needed)
+- [X] T002 Create `pyproject.toml` at repo root pinning Python 3.12 with deps: `fastapi>=0.115`, `pydantic>=2.7`, `pydantic-settings`, `sqlalchemy>=2.0`, `alembic`, `psycopg[binary]`, `mcp`, `authlib`, `python-jose[cryptography]`, `structlog`, `httpx`, `uvicorn[standard]`; dev deps: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`, `freezegun`
+- [X] T003 [P] Configure linters in `pyproject.toml`: ruff (line-length 100, target py312, full ruleset), mypy (strict), pytest (markers `contract`, `integration`, `unit`)
+- [X] T004 [P] Create `.github/workflows/ci.yml`: matrix on Python 3.12, runs ruff → mypy → pytest with a Postgres 16 service container; uploads coverage
+- [X] T005 [P] Create `gard/settings.py` using pydantic-settings, env-driven; documented keys: `GARD_DB_DSN`, `GARD_OIDC_DISCOVERY_URL`, `GARD_OIDC_AUDIENCE`, `GARD_JWT_SIGNING_KEY`, `GARD_CSV_SYNC_THRESHOLD` (default 10000), `GARD_LOG_LEVEL`
+- [X] T006 [P] Create `gard/logging.py` configuring `structlog` with JSON output, ISO timestamps, and a `correlation_id` contextvar
+- [X] T007 [P] Create `deploy/Dockerfile` (python:3.12-slim, multi-stage), `deploy/docker-compose.yml` (gard-api, gard-worker, gard-postgres), `deploy/.env.example`
+- [X] T008 [P] Create initial `gard-catalog/normalization/cisco.yaml` with the rules shown in `contracts/normalization-rule.schema.yaml` example (cisco-isr-1121, cisco-catalyst-9300) plus `version: 1.0.0` header
+- [X] T009 [P] Write `adr/ADR-0006-language-and-runtime.md` from research.md D1 (Python 3.12)
+- [X] T010 [P] Write `adr/ADR-0007-database-and-migrations.md` from research.md D2 (PostgreSQL 16 + SQLAlchemy 2 + Alembic)
+- [X] T011 [P] Write `adr/ADR-0008-auth-and-rbac.md` from research.md D3 (OIDC + signed-JWT API tokens, single FastAPI dependency)
+- [X] T012 [P] Write `adr/ADR-0009-audit-and-evidence-storage.md` from research.md D4 (append-only DB roles + daily checksum chain)
+- [X] T013 [P] Write `adr/ADR-0010-normalization-rules-format.md` from research.md D5 (YAML + DB override layer + 3-tier resolution)
 
 ---
 
