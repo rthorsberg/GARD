@@ -228,6 +228,8 @@
 - [ ] T128 [P] Update `ROADMAP.md` status table for F1: spec ✅ plan ✅ tasks ✅ implementation ✅; record any deviations from the plan in the row's notes
 - [ ] T129 [P] Capture any new ADRs that emerged during implementation (e.g. UUID v7 generator choice, `resolve_template` policy) in `adr/` with `Status: Accepted` and a back-reference to the originating decision
 - [ ] T130 [P] Performance probe `tests/integration/test_perf_sc_001_005.py` (gated by `pytest -m perf`): SC-001 (10k-row import ≤ 30 s) and SC-005 (MCP `list_devices` < 2 s @ 50k devices)
+- [ ] T131 [P] Contract test `tests/contract/test_tls_required.py` (FR-024): app refuses to start in production mode without TLS configuration; in dev mode binds plain HTTP only on `localhost`. Implementation lives in `gard/settings.py` startup validation and `deploy/Dockerfile` / `deploy/docker-compose.yml` reverse-proxy section
+- [ ] T132 [P] Contract test `tests/contract/test_token_ttl.py` (FR-025): issuance endpoint defaults `expires_at = issued_at + 90 days`; refuses null/indefinite TTL; `manage_mcp_tools` permission required for override; revocation propagates within 60 s across REST + MCP. Implementation in `gard/api/routers/admin_tokens.py` (T045) and `gard/api/middleware/auth.py` (T034)
 
 ---
 

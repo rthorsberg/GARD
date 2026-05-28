@@ -218,7 +218,7 @@ Structured proof of lifecycle-relevant events. Append-only.
 | Field | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | UUID v7 | PK | |
-| `evidence_type` | enum | not null | F1 emits `import` and `manual_classification`; later features extend |
+| `evidence_type` | enum | not null | F1 emits `import` and `manual_mapping`; later features extend |
 | `subject_type` | text | not null | e.g. `Device`, `ImportJob` |
 | `subject_id` | text | not null | |
 | `before_state` | JSONB | nullable | |
@@ -243,7 +243,7 @@ For service / MCP clients.
 | `subject` | text | not null | The `sub` claim |
 | `roles` | text[] | not null | Subset of role catalog |
 | `issued_at` | timestamptz | not null | |
-| `expires_at` | timestamptz | nullable | |
+| `expires_at` | timestamptz | not null | Default = `issued_at + 90 days`; operators with `manage_mcp_tools` may override per-token via the issuance endpoint, but the column itself is never null (FR-025) |
 | `revoked_at` | timestamptz | nullable | |
 | `created_by` | text | not null | |
 

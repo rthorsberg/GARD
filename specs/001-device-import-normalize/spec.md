@@ -5,6 +5,14 @@
 **Status**: Draft
 **Input**: User description: "Ingest device inventory via CSV and normalize raw vendor/model/platform to canonical lifecycle entities; lay platform foundation for audit, evidence, RBAC, REST and MCP"
 
+## Clarifications
+
+### Session 2026-05-28
+
+- Q: Should the spec mandate TLS for the REST and MCP transport? → A: Yes — TLS 1.2+ in production, plain HTTP only on localhost in dev (added as FR-024).
+- Q: Should API tokens have a mandatory finite TTL? → A: Yes — default ≤ 90 days, operator override allowed, no indefinite tokens via the standard endpoint, revocation effective within one minute (added as FR-025).
+- Q: Canonical term for an operator-supplied classification overriding the rule engine? → A: "manual mapping" (was previously also called "manual classification" in evidence enum; normalized in FR-018, data model, and contracts).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Lifecycle Manager imports a fresh device inventory from CSV (Priority: P1)
@@ -242,7 +250,8 @@ correlation id matching the response.
   values, result, and a correlation id.
 - **FR-018**: System MUST emit a `LifecycleEvidence` record for each
   import (with before/after device counts and a checksum of the source
-  file) and for each manual classification.
+  file) and for each manual mapping (the canonical term for an
+  operator-supplied classification overriding the rule engine).
 - **FR-019**: System MUST emit structured logs for every request
   carrying the same `correlation_id` used in the audit log and the
   response envelope.
@@ -261,6 +270,21 @@ correlation id matching the response.
 - **FR-023**: MCP MUST NOT expose raw SQL, shell, file-system, or
   unrestricted device-management access at any time
   (Constitution Principle VI).
+
+**Transport security & token hygiene**
+
+- **FR-024**: System MUST require TLS 1.2 or higher for all REST and
+  MCP transport in production deployments. Plain-HTTP listening MUST
+  be disabled outside of development; the development environment MAY
+  bind plain HTTP only on `localhost`. The deployed configuration MUST
+  fail to start if production-mode is enabled and TLS is not
+  configured.
+- **FR-025**: API tokens issued by GARD MUST carry a finite
+  `expires_at`. The default token TTL MUST be ≤ 90 days. Operators
+  with `manage_mcp_tools` permission MAY override the default per
+  token, but the standard issuance endpoint MUST NOT issue tokens
+  without an expiration. Token revocation (`revoked_at`) MUST take
+  effect within one minute across the API and MCP surfaces.
 
 ### Key Entities
 
