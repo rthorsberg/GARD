@@ -140,7 +140,8 @@ def run_sync_import(
 
         row: CsvRow = outcome.parsed
         ident = from_csv(row)
-        if ident.key in seen_keys:
+        is_duplicate_in_file = ident.key in seen_keys
+        if is_duplicate_in_file:
             counters.duplicate += 1
             error_rows.append(
                 {
@@ -154,7 +155,11 @@ def run_sync_import(
                     "raw": outcome.raw,
                 }
             )
-            # We still record the observation but don't double-count "accepted".
+            # The duplicate row IS still recorded as a DeviceObservation (so
+            # the audit trail captures it), but it is NOT counted as accepted
+            # or manual_review — otherwise the contract invariant
+            # `total = accepted + rejected + manual_review + duplicate`
+            # would not hold.
         seen_keys.add(ident.key)
 
         norm = normalize(session=session, row=row)
@@ -187,7 +192,10 @@ def run_sync_import(
         session.add(observation)
         last_observation_id[ident.key] = observation.id
 
-        if norm.confidence == Confidence.manual_review_required:
+        if is_duplicate_in_file:
+            # already counted under `duplicate` above
+            pass
+        elif norm.confidence == Confidence.manual_review_required:
             counters.manual_review += 1
         else:
             counters.accepted += 1
