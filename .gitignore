@@ -13,13 +13,23 @@ gard-speckit-start.zip
 *.tmp
 *.log
 
-# Python (in case we add tooling later)
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
 .venv/
 venv/
 .env
 .env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
 
 # Node (in case we add tooling later)
 node_modules/

@@ -1,0 +1,21 @@
+schema_version: 1
+vendor: nokia
+platform: sros
+version: 1
+revision: 0
+priority: 100
+match:
+  any:
+    - field: raw.os_string
+      regex: '(?i)\b(?:nokia|alcatel-?lucent)\s+(?:7[0-9]{3}|sr[\s-]?os|tim?os)\b'
+    - field: raw.snmp_sys_descr
+      regex: '(?i)tim?os|sr[\s-]?os'
+emit:
+  vendor: nokia
+  platform: sros
+  os_family: nokia-sros
+  hardware_family_template: "${raw.model_id|lower}"
+  software_release_template: "${raw.os_version}"
+notes: |
+  Nokia (formerly Alcatel-Lucent) 7750 SR / 7950 XRS / 7250 IXR running
+  SR OS (a.k.a. TiMOS).

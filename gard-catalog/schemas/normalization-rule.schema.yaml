@@ -1,0 +1,131 @@
+# JSON Schema (2020-12) for a single normalization rule, as used both in
+# gard-catalog/normalization/*.yaml (file rules) and in the DB override
+# table (db rules). Each YAML catalog file contains a top-level `rules:`
+# list of objects matching this schema.
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: gard://schema/normalization-rule
+title: GARD Normalization Rule
+type: object
+additionalProperties: false
+required: [id, match, output, confidence]
+
+properties:
+
+  id:
+    type: string
+    pattern: '^[a-z0-9][a-z0-9-]{1,63}$'
+    description: Stable, human-readable id. Lowercase, kebab-case.
+
+  priority:
+    type: integer
+    minimum: 0
+    maximum: 10000
+    default: 100
+    description: Higher priority wins within the same tier (file or db).
+
+  enabled:
+    type: boolean
+    default: true
+
+  match:
+    type: object
+    additionalProperties: false
+    description: |
+      At least one matcher must be present. Exact matchers are
+      case-insensitive after trimming. Regex matchers are Python `re`
+      syntax; case-insensitivity must be expressed with `(?i)`.
+    minProperties: 1
+    properties:
+      vendor_raw:
+        type: string
+      vendor_raw_regex:
+        type: string
+        format: regex
+      model_raw:
+        type: string
+      model_raw_regex:
+        type: string
+        format: regex
+      platform_family_raw:
+        type: string
+      platform_family_raw_regex:
+        type: string
+        format: regex
+      hardware_revision_regex:
+        type: string
+        format: regex
+
+  output:
+    type: object
+    additionalProperties: false
+    required: [vendor_normalized]
+    properties:
+      vendor_normalized:
+        type: string
+        minLength: 1
+      model_normalized:
+        type: string
+      platform_family:
+        type: string
+
+  confidence:
+    type: string
+    enum: [exact, high, medium]
+    description: |
+      Rules cannot produce `low` or `manual_review_required`. An
+      observation whose only candidate is a `medium` rule is still
+      classified at `medium`; the operator may then add a stronger rule
+      or a manual mapping.
+
+  notes:
+    type: string
+
+# Catalog file shape: a YAML document with `rules: [ ... ]`. The loader
+# uses the file path as a stable tie-breaker for equal-priority,
+# equal-specificity matches.
+catalog_file_shape:
+  type: object
+  required: [version, rules]
+  properties:
+    version:
+      type: string
+      pattern: '^\d+\.\d+\.\d+$'
+    rules:
+      type: array
+      items:
+        $ref: '#'
+
+# Example file
+example_file: |
+  version: 1.0.0
+  rules:
+    - id: cisco-isr-1121
+      priority: 100
+      match:
+        vendor_raw_regex: '^(?i)cisco(\s+systems)?$'
+        model_raw_regex:  '^(?i)isr[\s-]*1121.*'
+      output:
+        vendor_normalized: Cisco
+        model_normalized: ISR1121
+        platform_family: cisco-ios-xe
+      confidence: exact
+
+    - id: cisco-catalyst-9300
+      priority: 90
+      match:
+        vendor_raw_regex: '^(?i)cisco(\s+systems)?$'
+        model_raw_regex:  '^(?i)c?9300[\s-]*\d*l?$'
+      output:
+        vendor_normalized: Cisco
+        model_normalized: Catalyst-9300
+        platform_family: cisco-ios-xe
+      confidence: high
+
+    - id: zyxel-vendor-fallback
+      priority: 10
+      match:
+        vendor_raw_regex: '^(?i)zyxel.*$'
+      output:
+        vendor_normalized: Zyxel
+      confidence: medium

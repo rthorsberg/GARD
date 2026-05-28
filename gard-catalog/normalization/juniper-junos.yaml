@@ -1,0 +1,21 @@
+schema_version: 1
+vendor: juniper
+platform: junos
+version: 1
+revision: 0
+priority: 100
+match:
+  any:
+    - field: raw.os_string
+      regex: '(?i)\bjunos\b'
+    - field: raw.snmp_sys_descr
+      regex: '(?i)juniper networks.*junos'
+emit:
+  vendor: juniper
+  platform: junos
+  os_family: juniper-junos
+  hardware_family_template: "${raw.model_id|lower}"
+  software_release_template: "${raw.os_version}"
+notes: |
+  Covers MX/PTX/QFX/SRX/EX running classic Junos. Junos Evolved goes in
+  juniper-junos-evo.yaml (post-v1).
