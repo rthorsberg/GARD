@@ -19,7 +19,13 @@ class LifecycleEvidence(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7_default)
     evidence_type: Mapped[EvidenceType] = mapped_column(
-        Enum(EvidenceType, name="evidence_type", native_enum=False, length=32),
+        Enum(
+            EvidenceType,
+            name="evidence_type",
+            native_enum=False,
+            length=32,
+            values_callable=lambda x: [m.value for m in EvidenceType],
+        ),
         nullable=False,
     )
     subject_type: Mapped[str] = mapped_column(String(64), nullable=False)

@@ -3,6 +3,23 @@
 from __future__ import annotations
 
 import enum
+from collections.abc import Callable
+from typing import Any
+
+
+def values_callable(enum_cls: type[enum.Enum]) -> Callable[[type[enum.Enum]], list[Any]]:
+    """SQLAlchemy ``values_callable`` factory: serialize enums by ``.value``.
+
+    Without this, ``Enum(MyEnum, native_enum=False)`` stores the
+    member's *name*, which collides with our DB CHECK constraints that
+    enforce the value strings. Use as
+    ``Enum(MyEnum, values_callable=values_callable(MyEnum), ...)``.
+    """
+
+    def _by_value(_: type[enum.Enum]) -> list[Any]:
+        return [m.value for m in enum_cls]
+
+    return _by_value
 
 
 class LifecycleState(enum.StrEnum):

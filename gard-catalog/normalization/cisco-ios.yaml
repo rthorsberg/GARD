@@ -6,8 +6,11 @@ platform: ios
 version: 1
 revision: 0
 priority: 100
+confidence: high
 match:
   any:
+    - field: raw.vendor_raw
+      regex: '(?i)^cisco(\s+systems)?$'
     - field: raw.os_string
       regex: '(?i)cisco\s+ios(?:\s+software)?'
     - field: raw.snmp_sys_descr
@@ -20,4 +23,4 @@ emit:
   software_release_template: "${raw.os_version}"
 notes: |
   Covers traditional IOS, IOS XE 16.x+ (rel 16/17), Catalyst 9k running IOS-XE.
-  IOS-XR has its own rule.
+  IOS-XR has its own rule with higher priority.

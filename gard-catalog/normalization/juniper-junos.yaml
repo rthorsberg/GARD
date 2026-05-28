@@ -4,8 +4,11 @@ platform: junos
 version: 1
 revision: 0
 priority: 100
+confidence: high
 match:
   any:
+    - field: raw.vendor_raw
+      regex: '(?i)^juniper(\s+networks)?$'
     - field: raw.os_string
       regex: '(?i)\bjunos\b'
     - field: raw.snmp_sys_descr

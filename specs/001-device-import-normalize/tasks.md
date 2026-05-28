@@ -108,37 +108,37 @@
 
 ### Tests for User Story 1
 
-- [ ] T055 [P] [US1] Contract test `tests/contract/test_imports_post_sync.py`: `POST /imports/devices/csv` with a small CSV → 200 + `ImportSummary` shape; OpenAPI schema validation
-- [ ] T056 [P] [US1] Contract test `tests/contract/test_imports_post_async.py`: `POST /imports/devices/csv` with a CSV exceeding `GARD_CSV_SYNC_THRESHOLD` → 202 + `ImportJobAck`
-- [ ] T057 [P] [US1] Contract test `tests/contract/test_imports_duplicate.py`: re-upload same file → 409 with `code=DUPLICATE_FILE`; with `?override=true` → 200; both attempts produce audit rows
-- [ ] T058 [P] [US1] Contract test `tests/contract/test_imports_jobs_get.py`: `GET /imports/jobs/{id}` returns `ImportJob` shape; 404 for unknown id
-- [ ] T059 [P] [US1] Contract test `tests/contract/test_imports_report.py`: `GET /imports/jobs/{id}/report` returns `ImportReport` with `row_errors` list; rows reference original row numbers and raw rows
-- [ ] T060 [P] [US1] Contract test `tests/contract/test_devices_list.py`: `GET /devices` filter combinations (`vendor_normalized`, `model_normalized`, `site`, `region`, `lifecycle_state`); pagination via `limit` + `page_token`; every item carries `envelope`
-- [ ] T061 [P] [US1] Contract test `tests/contract/test_devices_get.py`: `GET /devices/{id}` returns `DeviceWithEnvelope`; 404 for unknown id
-- [ ] T062 [P] [US1] Contract test `tests/contract/test_csv_schema.py`: validate the schema declared in `contracts/csv-schema.yaml` against representative valid and invalid rows; verify every error code is reachable
-- [ ] T063 [P] [US1] Integration test `tests/integration/test_us1_clean_import.py` (acceptance scenario US1-AS1): 100-row valid CSV → all accepted; devices listable; `lifecycle_state=classified`
-- [ ] T064 [P] [US1] Integration test `tests/integration/test_us1_mixed_import.py` (US1-AS2): 5 missing-column rows + 3 unknown-vendor rows → 5 rejected with reasons, 3 manual-review observations created, downloadable error report
-- [ ] T065 [P] [US1] Integration test `tests/integration/test_us1_reimport_update.py` (US1-AS3): second CSV with updated firmware for same hostnames → new observations, no overwrites, devices' lifecycle reflects the latest observation
-- [ ] T066 [P] [US1] Integration test `tests/integration/test_us1_duplicate_file.py` (edge case): identical-hash re-upload → 409; `?override=true` → 200, `is_override=true` recorded
-- [ ] T067 [P] [US1] Integration test `tests/integration/test_us1_async_import.py`: > threshold CSV → 202, worker drains queue, `GET /imports/jobs/{id}` transitions `pending → processing → completed`
-- [ ] T068 [P] [US1] Integration test `tests/integration/test_us1_evidence_emitted.py` (SC-007): every completed import produces exactly one `lifecycle_evidence` row with matching `source_checksum`
-- [ ] T069 [P] [US1] Integration test `tests/integration/test_us1_audit_coverage.py` (SC-006): every state-mutating action in the import flow appears in `audit_events`, `correlation_id` matches the response header
+- [X] T055 [P] [US1] Contract test `tests/contract/test_imports_post_sync.py`: `POST /imports/devices/csv` with a small CSV → 200 + `ImportSummary` shape; OpenAPI schema validation
+- [X] T056 [P] [US1] Contract test `tests/contract/test_imports_post_async.py`: `POST /imports/devices/csv` with a CSV exceeding `GARD_CSV_SYNC_THRESHOLD` → 202 + `ImportJobAck`
+- [X] T057 [P] [US1] Contract test `tests/contract/test_imports_duplicate.py`: re-upload same file → 409 with `code=DUPLICATE_FILE`; with `?override=true` → 200; both attempts produce audit rows
+- [X] T058 [P] [US1] Contract test `tests/contract/test_imports_jobs_get.py`: `GET /imports/jobs/{id}` returns `ImportJob` shape; 404 for unknown id
+- [X] T059 [P] [US1] Contract test `tests/contract/test_imports_report.py`: `GET /imports/jobs/{id}/report` returns `ImportReport` with `row_errors` list; rows reference original row numbers and raw rows
+- [X] T060 [P] [US1] Contract test `tests/contract/test_devices_list.py`: `GET /devices` filter combinations (`vendor_normalized`, `model_normalized`, `site`, `region`, `lifecycle_state`); pagination via `limit` + `page_token`; every item carries `envelope`
+- [X] T061 [P] [US1] Contract test `tests/contract/test_devices_get.py`: `GET /devices/{id}` returns `DeviceWithEnvelope`; 404 for unknown id
+- [X] T062 [P] [US1] Contract test `tests/contract/test_csv_schema.py`: validate the schema declared in `contracts/csv-schema.yaml` against representative valid and invalid rows; verify every error code is reachable
+- [X] T063 [P] [US1] Integration test `tests/integration/test_us1_clean_import.py` (acceptance scenario US1-AS1): 100-row valid CSV → all accepted; devices listable; `lifecycle_state=classified`
+- [X] T064 [P] [US1] Integration test `tests/integration/test_us1_mixed_import.py` (US1-AS2): 5 missing-column rows + 3 unknown-vendor rows → 5 rejected with reasons, 3 manual-review observations created, downloadable error report
+- [X] T065 [P] [US1] Integration test `tests/integration/test_us1_reimport_update.py` (US1-AS3): second CSV with updated firmware for same hostnames → new observations, no overwrites, devices' lifecycle reflects the latest observation
+- [X] T066 [P] [US1] Integration test `tests/integration/test_us1_duplicate_file.py` (edge case): identical-hash re-upload → 409; `?override=true` → 200, `is_override=true` recorded
+- [X] T067 [P] [US1] Integration test `tests/integration/test_us1_async_import.py`: > threshold CSV → 202, worker drains queue, `GET /imports/jobs/{id}` transitions `pending → processing → completed`
+- [X] T068 [P] [US1] Integration test `tests/integration/test_us1_evidence_emitted.py` (SC-007): every completed import produces exactly one `lifecycle_evidence` row with matching `source_checksum`
+- [X] T069 [P] [US1] Integration test `tests/integration/test_us1_audit_coverage.py` (SC-006): every state-mutating action in the import flow appears in `audit_events`, `correlation_id` matches the response header
 
 ### Implementation for User Story 1
 
-- [ ] T070 [P] [US1] CSV row Pydantic models in `gard/api/schemas/csv_row.py` matching `contracts/csv-schema.yaml`
-- [ ] T071 [P] [US1] Streaming CSV reader in `gard/core/csv_reader.py` with UTF-8 enforcement, header detection, per-row Pydantic validation, and an iterator yielding `(row_number, row_dict, errors)`
-- [ ] T072 [P] [US1] Identity resolution in `gard/core/identity.py`: serial-first, `(hostname, site)` fallback, reject when both absent (per research.md D9)
-- [ ] T073 [P] [US1] YAML catalog loader in `gard/catalog/normalization_loader.py`: walks `gard-catalog/normalization/`, validates each file against the JSON Schema in `contracts/normalization-rule.schema.yaml`, upserts file rules into the DB with `source=file`
-- [ ] T074 [US1] Normalization rule engine in `gard/core/normalization_engine.py`: tier-aware resolution (manual mapping → DB override → file rule), specificity computation, conflict detection, returns `(rule_id, output, confidence)` or `None` (depends on T073)
-- [ ] T075 [US1] Normalization controller in `gard/core/normalization_controller.py`: orchestrates engine for a single observation, materializes the explainable envelope (depends on T074, T041)
-- [ ] T076 [US1] Device controller in `gard/core/device_controller.py`: upsert by identity, write `vendor_raw`/`model_raw` from latest observation, transition `imported→classified` when confidence is non-`manual_review_required`, list/get methods (depends on T072, T075)
-- [ ] T077 [US1] Pydantic response schemas in `gard/api/schemas/devices.py` (`DeviceWithEnvelope`, `DeviceList`) and `gard/api/schemas/imports.py` (`ImportSummary`, `ImportJobAck`, `ImportJob`, `ImportReport`)
-- [ ] T078 [US1] Import controller in `gard/core/import_controller.py`: orchestrates CSV reader → identity → normalization → device upsert → DeviceObservation insert → audit + evidence emission; computes `file_sha256`; produces `ImportSummary` (depends on T071, T076, T038, T039)
-- [ ] T079 [US1] Worker import processor in `gard/worker.py`: `SELECT ... FOR UPDATE SKIP LOCKED` over `import_jobs WHERE status='pending'`, calls into `import_controller`; handles failure path (sets `status='failed'` + audit row) (depends on T078)
-- [ ] T080 [US1] REST router `gard/api/routers/imports.py`: `POST /imports/devices/csv` (sync ≤ threshold, async > threshold), `GET /imports/jobs/{id}`, `GET /imports/jobs/{id}/report`; gated by `import_devices` permission for POST and `read_device_lifecycle` for GETs (depends on T078)
-- [ ] T081 [US1] REST router `gard/api/routers/devices.py`: `GET /devices`, `GET /devices/{id}`; gated by `read_device_lifecycle` (depends on T076, T077)
-- [ ] T082 [US1] CLI subcommand `gard catalog reload` in `gard/__main__.py` invoking the catalog loader (developer convenience, used by quickstart.md)
+- [X] T070 [P] [US1] CSV row Pydantic models in `gard/api/schemas/csv_row.py` matching `contracts/csv-schema.yaml`
+- [X] T071 [P] [US1] Streaming CSV reader in `gard/core/csv_reader.py` with UTF-8 enforcement, header detection, per-row Pydantic validation, and an iterator yielding `(row_number, row_dict, errors)`
+- [X] T072 [P] [US1] Identity resolution in `gard/core/identity.py`: serial-first, `(hostname, site)` fallback, reject when both absent (per research.md D9)
+- [X] T073 [P] [US1] YAML catalog loader in `gard/catalog/normalization_loader.py`: walks `gard-catalog/normalization/`, validates each file against the JSON Schema in `contracts/normalization-rule.schema.yaml`, upserts file rules into the DB with `source=file`
+- [X] T074 [US1] Normalization rule engine in `gard/core/normalization_engine.py`: tier-aware resolution (manual mapping → DB override → file rule), specificity computation, conflict detection, returns `(rule_id, output, confidence)` or `None` (depends on T073)
+- [X] T075 [US1] Normalization controller in `gard/core/normalization_controller.py`: orchestrates engine for a single observation, materializes the explainable envelope (depends on T074, T041)
+- [X] T076 [US1] Device controller in `gard/core/device_controller.py`: upsert by identity, write `vendor_raw`/`model_raw` from latest observation, transition `imported→classified` when confidence is non-`manual_review_required`, list/get methods (depends on T072, T075)
+- [X] T077 [US1] Pydantic response schemas in `gard/api/schemas/devices.py` (`DeviceWithEnvelope`, `DeviceList`) and `gard/api/schemas/imports.py` (`ImportSummary`, `ImportJobAck`, `ImportJob`, `ImportReport`)
+- [X] T078 [US1] Import controller in `gard/core/import_controller.py`: orchestrates CSV reader → identity → normalization → device upsert → DeviceObservation insert → audit + evidence emission; computes `file_sha256`; produces `ImportSummary` (depends on T071, T076, T038, T039)
+- [X] T079 [US1] Worker import processor in `gard/worker.py`: `SELECT ... FOR UPDATE SKIP LOCKED` over `import_jobs WHERE status='pending'`, calls into `import_controller`; handles failure path (sets `status='failed'` + audit row) (depends on T078)
+- [X] T080 [US1] REST router `gard/api/routers/imports.py`: `POST /imports/devices/csv` (sync ≤ threshold, async > threshold), `GET /imports/jobs/{id}`, `GET /imports/jobs/{id}/report`; gated by `import_devices` permission for POST and `read_device_lifecycle` for GETs (depends on T078)
+- [X] T081 [US1] REST router `gard/api/routers/devices.py`: `GET /devices`, `GET /devices/{id}`; gated by `read_device_lifecycle` (depends on T076, T077)
+- [X] T082 [US1] CLI subcommand `gard catalog reload` in `gard/__main__.py` invoking the catalog loader (developer convenience, used by quickstart.md)
 
 **Checkpoint**: User Story 1 fully functional; quickstart.md steps 1–6 pass; SC-001, SC-002, SC-003, SC-006, SC-007, SC-008 verifiable.
 

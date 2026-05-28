@@ -4,8 +4,11 @@ platform: sros
 version: 1
 revision: 0
 priority: 100
+confidence: high
 match:
   any:
+    - field: raw.vendor_raw
+      regex: '(?i)^(?:nokia|alcatel-?lucent)$'
     - field: raw.os_string
       regex: '(?i)\b(?:nokia|alcatel-?lucent)\s+(?:7[0-9]{3}|sr[\s-]?os|tim?os)\b'
     - field: raw.snmp_sys_descr
