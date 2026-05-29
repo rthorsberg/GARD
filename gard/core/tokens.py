@@ -177,5 +177,4 @@ def issue_token_cli(subject: str, role: str, ttl_seconds: int | None) -> int:  #
         )
         sys.stdout.write(issued.jwt + "\n")
         sys.stderr.write(f"jti={issued.token_id} expires_at={issued.expires_at.isoformat()}\n")
-        _log.info("token.issued", subject=subject, role=role, jti=str(issued.token_id))
     return 0
