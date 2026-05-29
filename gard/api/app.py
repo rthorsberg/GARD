@@ -24,12 +24,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         # Best-effort catalog reload on app boot. Failures are logged but
-        # do not block startup.
+        # do not block startup (constitution: serve last-known state rather
+        # than crash — ADR-0011 §8).
         from gard.catalog.normalization_loader import load_catalog
+        from gard.core.firmware_catalog_controller import reload_safe as fw_reload_safe
         from gard.core.logging import get_logger
-        from gard.db.session import session_scope
+        from gard.db.session import append_only_scope, session_scope
 
         log = get_logger(__name__)
+
+        # F1 normalization rules.
         try:
             with session_scope() as session:
                 report = load_catalog(session, s.catalog_root)
@@ -41,6 +45,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         except Exception as exc:  # pragma: no cover - DB may be down at boot
             log.warning("catalog.bootstrap_failed", error=str(exc))
+
+        # F2 firmware catalog. reload_safe swallows errors and emits a
+        # structured-log warning — the API serves the last-known catalog
+        # state rather than refusing to come up. See ADR-0011 §8.
+        try:
+            outcome = fw_reload_safe(
+                session_factory=session_scope,
+                audit_session_factory=append_only_scope,
+                catalog_root=s.firmware_catalog_root,
+            )
+            if outcome.success and outcome.report is not None:
+                log.info(
+                    "firmware_catalog.bootstrap",
+                    loaded=outcome.report.loaded,
+                    removed=outcome.report.removed,
+                    unchanged=outcome.report.unchanged,
+                    files=len(outcome.report.file_relpaths_seen),
+                    dirty=outcome.dirty,
+                )
+            else:
+                err = outcome.error
+                log.warning(
+                    "firmware_catalog.bootstrap_failed",
+                    file=err.file_relpath if err is not None else "?",
+                    reason=err.reason if err is not None else "?",
+                )
+        except Exception as exc:  # pragma: no cover - DB may be down at boot
+            log.warning("firmware_catalog.bootstrap_unexpected_error", error=str(exc))
+
         yield
 
     app = FastAPI(
@@ -121,7 +154,14 @@ def _install_openapi_security(app: FastAPI) -> None:
     app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
-_PHASE3_ROUTERS: tuple[str, ...] = ("devices", "imports", "observations", "rules")
+_PHASE3_ROUTERS: tuple[str, ...] = (
+    "devices",
+    "imports",
+    "observations",
+    "rules",
+    # F2 (002-firmware-catalog):
+    "firmware_compliance",
+)
 
 
 def _register_phase3(app: FastAPI) -> None:

@@ -29,6 +29,10 @@ class LifecycleState(enum.StrEnum):
     target_defined = "target_defined"
     compliant = "compliant"
     outside_target = "outside_target"
+    # F2: target matched but no observed_firmware on file (terminal until
+    # next observation arrives). See spec.md FR-010 / FR-013 and
+    # migration 0004.
+    unknown = "unknown"
     ready_for_uplift = "ready_for_uplift"
     blocked = "blocked"
     uplift_planned = "uplift_planned"

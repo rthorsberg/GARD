@@ -28,7 +28,8 @@ RUN uv pip install --system --no-deps --target /install . \
       "mcp>=1.0,<2" "authlib>=1.3,<2" "python-jose[cryptography]>=3.3,<4" \
       "structlog>=24.1,<25" "httpx>=0.27,<1" "uvicorn[standard]>=0.30,<0.40" \
       "uuid7>=0.1,<1" "pyyaml>=6.0,<7" "jsonschema>=4.22,<5" \
-      "python-multipart>=0.0.9,<1"
+      "python-multipart>=0.0.9,<1" \
+      "networkx>=3.2,<4"
 
 # ---------- runtime ----------
 FROM base AS runtime
