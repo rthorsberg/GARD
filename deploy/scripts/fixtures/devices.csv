@@ -1,0 +1,6 @@
+hostname,site,serial_number,vendor_raw,model_raw,observed_firmware,os_string,management_ip,observed_at,actor_email
+r1.oslo,oslo-1,FOX1234ABC1,Cisco Systems,ASR9006,7.5.2,Cisco IOS XR Software 7.5.2,10.0.0.1,2026-05-28T20:00:00Z,ops@example.com
+r2.oslo,oslo-1,JN1234567890,Juniper Networks,MX204,22.4R3-S2,Junos 22.4R3-S2,10.0.0.2,2026-05-28T20:00:00Z,ops@example.com
+r3.oslo,oslo-1,NS1234567890,Nokia,7750 SR-1,23.10.R3,TiMOS-B-23.10.R3,10.0.0.3,2026-05-28T20:00:00Z,ops@example.com
+r4.bergen,bergen-1,FOX9876DEF2,Cisco Systems,NCS5501,7.8.1,Cisco IOS XR Software 7.8.1,10.0.1.1,2026-05-28T20:05:00Z,ops@example.com
+r5.bergen,bergen-1,JN9876543210,Juniper Networks,MX480,23.2R1,Junos 23.2R1,10.0.1.2,2026-05-28T20:05:00Z,ops@example.com
