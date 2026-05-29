@@ -21,6 +21,7 @@ jobs:
           version: "latest"
           python-version: "3.12"
           enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Create venv + install
         run: |
           uv venv
@@ -67,6 +68,7 @@ jobs:
           version: "latest"
           python-version: "3.12"
           enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Create venv + install
         run: |
           uv venv
