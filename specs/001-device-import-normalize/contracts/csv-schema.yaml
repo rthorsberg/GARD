@@ -3,8 +3,21 @@
 # Versioned and echoed in the response header X-Gard-Csv-Schema-Version.
 # UTF-8 only. Header row is required. Extra columns are preserved into
 # DeviceObservation.raw_payload but ignored for normalization.
+#
+# Version history:
+#   1.0.0 (F1) — initial schema (devices + observed firmware/bootloader).
+#   1.1.0 (F2) — additively introduces three optional columns: ram_mb,
+#                disk_mb, licenses. v1.0.0 files continue to validate; the
+#                three new columns default to NULL when absent.
+#
+# Schema-version negotiation: the importer accepts X-Gard-Csv-Schema-Version
+# in {"1.0.0", "1.1.0"}. Unknown versions are rejected with HTTP 400
+# (UNSUPPORTED_SCHEMA_VERSION). The response always echoes the version the
+# importer used to interpret the file (the highest version whose columns
+# all parse).
 
-schema_version: "1.0.0"
+schema_version: "1.1.0"
+supported_schema_versions: ["1.0.0", "1.1.0"]
 
 encoding: utf-8
 delimiter: ","
@@ -105,6 +118,38 @@ columns:
     format: rfc3339
     description: When the actual state was observed. Defaults to import time if missing.
 
+  # --- F2 (schema_version 1.1.0) additive columns -----------------------------
+  - name: ram_mb
+    type: integer
+    required: false
+    nullable: true
+    since: "1.1.0"
+    description: |
+      Optional installed RAM in megabytes. Used by firmware prerequisite
+      rules (e.g. min_ram_mb). Empty cell → NULL (never coerced to 0).
+
+  - name: disk_mb
+    type: integer
+    required: false
+    nullable: true
+    since: "1.1.0"
+    description: |
+      Optional installed disk in megabytes. Used by firmware prerequisite
+      rules (e.g. min_disk_mb). Empty cell → NULL.
+
+  - name: licenses
+    type: string_list
+    list_separator: ";"
+    required: false
+    nullable: true
+    since: "1.1.0"
+    description: |
+      Optional semicolon-separated list of license tokens (e.g.
+      "ADVANCED-IP;K9-SEC"). Per-element whitespace is trimmed; empty
+      elements are skipped. Commas are NOT accepted as a separator and
+      surface as a row-level error (research.md D7) to avoid CSV-quoting
+      ambiguity.
+
 # Row-level validation rules (post column parsing).
 row_validations:
   - id: identity_present
@@ -132,6 +177,8 @@ error_codes:
   ROW_BAD_IPADDRESS:          "management_ip is not a valid IPv4/IPv6 address."
   ROW_BAD_DATETIME:           "observed_at is not a valid RFC 3339 timestamp."
   ROW_DUPLICATE_IN_FILE:      "Row collides with an earlier row on identity; later row wins for canonical Device, all rows recorded as observations."
+  # F2 additions (schema 1.1.0):
+  ROW_VALIDATION:             "Per-row Pydantic validation failed; see message for details (e.g. licenses must use ';' separator, not ',')."
 
 # Example
 example_row:
