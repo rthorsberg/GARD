@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
@@ -86,7 +87,7 @@ def _install_openapi_security(app: FastAPI) -> None:
     with the bearer-protected ``/api/v1/...`` surface.
     """
 
-    def custom_openapi() -> dict:
+    def custom_openapi() -> dict[str, Any]:
         if app.openapi_schema:
             return app.openapi_schema
         schema = get_openapi(
