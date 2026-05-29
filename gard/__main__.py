@@ -20,11 +20,25 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     catalog = sub.add_parser("catalog", help="Catalog operations")
     catalog_sub = catalog.add_subparsers(dest="catalog_cmd", required=True)
-    reload_p = catalog_sub.add_parser("reload", help="Reload normalization rules from YAML into DB")
+    reload_p = catalog_sub.add_parser(
+        "reload",
+        help="Reload normalization AND firmware catalogs from YAML into DB",
+    )
     reload_p.add_argument(
         "--root",
         default=None,
-        help="Override catalog root (default: GARD_CATALOG_ROOT or gard-catalog)",
+        help="Override normalization catalog root (default: GARD_CATALOG_ROOT)",
+    )
+    reload_p.add_argument(
+        "--firmware-root",
+        default=None,
+        help="Override firmware catalog root (default: GARD_FIRMWARE_CATALOG_ROOT)",
+    )
+    reload_p.add_argument(
+        "--only",
+        choices=["normalization", "firmware", "both"],
+        default="both",
+        help="Limit which catalog(s) to reload (default: both)",
     )
 
     issue = sub.add_parser("issue-token", help="Mint a service API token")
@@ -51,18 +65,60 @@ def main(argv: Sequence[str] | None = None) -> int:
             from pathlib import Path
 
             from gard.catalog.normalization_loader import load_catalog
+            from gard.core.firmware_catalog_controller import reload as fw_reload
             from gard.core.settings import get_settings
-            from gard.db.session import session_scope
+            from gard.db.session import append_only_scope, session_scope
 
-            root = Path(args.root) if args.root else get_settings().catalog_root
-            with session_scope() as session:
-                report = load_catalog(session, root)
-            sys.stdout.write(
-                f"loaded={report.loaded} skipped={report.skipped} errors={len(report.errors)}\n"
+            settings = get_settings()
+            norm_root = Path(args.root) if args.root else settings.catalog_root
+            fw_root = (
+                Path(args.firmware_root)
+                if args.firmware_root
+                else settings.firmware_catalog_root
             )
-            for e in report.errors:
-                sys.stderr.write(f"!! {e}\n")
-            return 0 if not report.errors else 1
+            only = args.only
+
+            rc = 0
+            if only in ("normalization", "both"):
+                with session_scope() as session:
+                    report = load_catalog(session, norm_root)
+                sys.stdout.write(
+                    f"normalization: loaded={report.loaded} "
+                    f"skipped={report.skipped} errors={len(report.errors)}\n"
+                )
+                for e in report.errors:
+                    sys.stderr.write(f"!! norm: {e}\n")
+                if report.errors:
+                    rc = 1
+
+            if only in ("firmware", "both"):
+                with session_scope() as session, append_only_scope() as audit:
+                    outcome = fw_reload(
+                        session=session,
+                        audit_session=audit,
+                        catalog_root=fw_root,
+                    )
+                    if not outcome.success:
+                        session.rollback()
+                        sys.stderr.write(
+                            f"!! firmware: reload failed: "
+                            f"{outcome.error.file_relpath if outcome.error else '?'}: "
+                            f"{outcome.error.reason if outcome.error else '?'}\n"
+                        )
+                        return 1
+                    rep = outcome.report
+                    if rep is None:
+                        sys.stderr.write(
+                            "!! firmware: success outcome had no report (unreachable)\n"
+                        )
+                        return 1
+                    sys.stdout.write(
+                        f"firmware: loaded={rep.loaded} removed={rep.removed} "
+                        f"unchanged={rep.unchanged} files={len(rep.file_relpaths_seen)} "
+                        f"dirty={outcome.dirty}\n"
+                    )
+
+            return rc
         return 2
 
     if args.cmd == "issue-token":

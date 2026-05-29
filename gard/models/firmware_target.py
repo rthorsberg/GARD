@@ -13,7 +13,7 @@ import datetime as dt
 import uuid
 from typing import Any
 
-from sqlalchemy import DateTime, Index, String, Text, func, text
+from sqlalchemy import Date, DateTime, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,12 +41,10 @@ class FirmwareTarget(Base):
     platform_family: Mapped[str] = mapped_column(String, nullable=False)
     target_version: Mapped[str] = mapped_column(String, nullable=False)
     scope_selector: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    valid_from: Mapped[dt.datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    valid_until: Mapped[dt.datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    # Policy window — calendar dates (not datetimes); matches release_date
+    # convention on FirmwarePackage and the YAML fixtures.
+    valid_from: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    valid_until: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (

@@ -29,6 +29,7 @@ Downgrade raises NotImplementedError — F2 data is not recoverable from F1 alon
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
@@ -63,7 +64,11 @@ def _check_in(col: str, allowed: tuple[str, ...], name: str) -> sa.CheckConstrai
 
 
 # Common catalog columns (data-model.md §1 preamble).
-def _common_cols() -> list[sa.Column[object]]:
+# The return type is intentionally ``list[Any]`` rather than
+# ``list[sa.Column[object]]`` because SQLAlchemy's TypeEngine generics
+# don't compose cleanly with Alembic's spread-as-positional-arg form;
+# narrowing is unhelpful since we never read these columns from Python.
+def _common_cols() -> list[Any]:
     return [
         sa.Column("id", pg.UUID(as_uuid=True), primary_key=True),
         sa.Column("loaded_from_git_sha", sa.String(40), nullable=True),
@@ -99,8 +104,11 @@ def upgrade() -> None:
         sa.Column("platform_family", sa.String, nullable=False),
         sa.Column("target_version", sa.String, nullable=False),
         sa.Column("scope_selector", pg.JSONB, nullable=False),
-        sa.Column("valid_from", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("valid_until", sa.DateTime(timezone=True), nullable=True),
+        # valid_from/until are calendar dates per data-model.md §1
+        # (matches release_date on packages). DateTime adds tz semantics
+        # that don't apply to policy windows.
+        sa.Column("valid_from", sa.Date, nullable=True),
+        sa.Column("valid_until", sa.Date, nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_index(

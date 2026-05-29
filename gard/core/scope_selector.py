@@ -52,7 +52,7 @@ SET_MEMBERSHIP_KEYS: frozenset[str] = frozenset(
 )
 
 
-class UnknownSelectorKey(ValueError):  # noqa: N818  -- intentional: domain term, not "*Error"
+class UnknownSelectorKey(ValueError):
     """Raised when a selector contains a key outside ``KNOWN_KEYS``.
 
     The loader catches this, rolls the reload back, and emits
