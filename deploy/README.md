@@ -8,9 +8,42 @@ with database migrations and the normalization-rule catalog
 
 ```bash
 # from repo root
+make up-build      # build images + start stack
+make seed          # mint dev token + import 5-device fixture
+open http://127.0.0.1:8080/docs
+```
+
+Or the long form:
+
+```bash
 docker compose -f deploy/docker-compose.yml up -d --build
 curl http://127.0.0.1:8080/healthz
 # {"status":"ok","version":"0.1.0","service":"gard"}
+```
+
+## Make targets
+
+Run `make` (or `make help`) from the repo root for the full list. The
+common ones:
+
+| Target | Effect |
+|---|---|
+| `make up-build` | Build images + start the stack (Postgres + API). |
+| `make up` | Start an existing stack without rebuilding. |
+| `make down` | Stop the stack; keep the Postgres volume. |
+| `make down-volumes` | Stop the stack **and wipe** the DB volume. |
+| `make seed` | Mint a `lifecycle_manager` token + import `deploy/scripts/fixtures/devices.csv`. Idempotent. |
+| `make reset` | `down-volumes` → `up-build` → `seed`. Clean-slate dev environment in one shot. |
+| `make token` | Just mint a fresh dev token (2-hour TTL). |
+| `make test` | Run the test suite against the running Postgres. |
+| `make logs` | Tail the API logs. |
+
+The seed writes its JWT to `.gard/token.jwt` (gitignored, mode `600`).
+Reuse it across calls:
+
+```bash
+curl -H "Authorization: Bearer $(cat .gard/token.jwt)" \
+  http://127.0.0.1:8080/api/v1/devices | jq
 ```
 
 The first `up` will build the image, start Postgres, run the

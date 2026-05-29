@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# Local dev seed artefacts (mint tokens, etc.) - never commit these
+.gard/
+
 # Editor / IDE local state
 .vscode/
 .idea/
