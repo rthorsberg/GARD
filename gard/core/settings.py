@@ -89,6 +89,28 @@ class Settings(BaseSettings):
     import_max_bytes: int = 50 * 1024 * 1024  # 50 MiB
     import_concurrency: int = 4
 
+    # --- F2: firmware catalog -------------------------------------------
+    firmware_catalog_root: Path = Field(
+        default=Path("gard-catalog/firmware"),
+        description=(
+            "Filesystem root containing the YAML firmware catalog "
+            "(targets/, packages/, upgrade-paths/, prerequisites/). "
+            "Source of truth per ADR-0011; the DB tables are a read-through cache."
+        ),
+    )
+    blob_root: Path = Field(
+        default=Path("/var/lib/gard/blobs"),
+        description=(
+            "Filesystem root for LocalFsBlobStore. Content-addressed under "
+            "sha256/<first2>/<remaining62>.bin. v1 has no S3 backend."
+        ),
+    )
+    firmware_blob_max_bytes: int = Field(
+        default=5 * 1024**3,  # 5 GiB
+        ge=1,
+        description="Per-upload size cap for firmware blobs (FR-031).",
+    )
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_weak_prod_secret(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]

@@ -77,6 +77,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106", "S311", "PT011"]
 "gard/db/migrations/**/*.py" = ["N999", "E402"]
+# Blob-store leaf exceptions intentionally omit the "Error" suffix —
+# they're domain terms (BlobChecksumMismatch, BlobTooLarge, etc.) and
+# BlobStoreError is the canonical Error-suffixed base class.
+"gard/core/blob_store/__init__.py" = ["N818"]
 
 [tool.ruff.format]
 quote-style = "double"
