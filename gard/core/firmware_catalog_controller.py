@@ -54,12 +54,13 @@ from gard.core.audit import emit as audit_emit
 from gard.core.logging import get_correlation_id, get_logger
 from gard.core.settings import get_settings
 from gard.models import (
+    Device,
     FirmwarePackage,
     FirmwarePrerequisiteRule,
     FirmwareTarget,
     FirmwareUpgradePath,
 )
-from gard.models._enums import ActorType, AuditResult
+from gard.models._enums import ActorType, AuditResult, LifecycleState
 
 _log = get_logger(__name__)
 
@@ -96,6 +97,11 @@ class ReloadOutcome:
     error: FirmwareCatalogLoadError | None = None
     git_shas_by_file: dict[str, str | None] = field(default_factory=dict)
     dirty: bool = False
+    # T040: number of devices whose compliance was re-checked after this
+    # reload. Upper bound on `firmware_target.compliance_evaluated` audit
+    # rows produced as a side effect. 0 when the reload was a no-op or
+    # touched no targets and no firmware-state devices existed.
+    devices_reevaluated: int = 0
 
 
 # ---- git helpers ------------------------------------------------------
@@ -319,12 +325,127 @@ def reload(
             },
         )
 
+    # T040: bounded compliance re-eval after a successful reload. Only
+    # touch devices that could possibly have a different verdict than
+    # before — never the whole devices table.
+    re_evaluated = _reevaluate_compliance_post_reload(
+        session=session,
+        audit_session=audit_session,
+        report=report,
+        actor=actor,
+    )
+
     return ReloadOutcome(
         success=True,
         report=report,
         git_shas_by_file=sha_map,
         dirty=dirty,
+        devices_reevaluated=re_evaluated,
     )
+
+
+# ---- bounded post-reload compliance re-evaluation --------------------
+
+
+def _reevaluate_compliance_post_reload(
+    *,
+    session: Session,
+    audit_session: Session,
+    report: LoadReport,
+    actor: str,
+) -> int:
+    """Re-run compliance evaluation for devices touched by this reload.
+
+    "Touched" = device satisfies at least one of:
+
+    1. Currently in a firmware-derived lifecycle state
+       (compliant / outside_target / unknown / target_defined). The
+       target they were resolved against may have just changed.
+    2. Matches the scope_selector of a target that was loaded, removed,
+       or had its scope changed in this reload. Their verdict could
+       flip from "no target matched" to "target found" (or vice versa).
+
+    We unionize these sets, deduplicate, and call
+    ``compliance_controller.evaluate()`` once per device. The
+    controller is itself idempotent — re-running against unchanged
+    state is silent. So this can never amplify into a runaway audit
+    storm: at most one ``compliance_evaluated`` row per device, and
+    only when the state actually transitions.
+
+    Returns the number of devices that were actually evaluated (which
+    is the upper bound on emitted audit rows — most will be no-ops).
+    """
+    # Avoid the import cycle: compliance_controller imports the loader
+    # transitively, so we import lazily here.
+    from gard.core import compliance_controller
+
+    target_deltas = [d for d in report.deltas if d.kind == "target" and d.action != "unchanged"]
+    touched_target_ids = {d.entity_id for d in target_deltas}
+
+    # Set 1: devices already in a firmware-derived lifecycle state.
+    firmware_states = (
+        LifecycleState.target_defined,
+        LifecycleState.compliant,
+        LifecycleState.outside_target,
+        LifecycleState.unknown,
+    )
+    set1: set[Any] = set(
+        session.scalars(
+            select(Device.id).where(Device.lifecycle_state.in_(firmware_states))
+        )
+    )
+
+    # Set 2: devices whose facts match any touched target's scope.
+    # Without a real selector-to-SQL compiler we fetch the touched
+    # targets and evaluate selectors in Python. The N is bounded by
+    # |touched_targets| * |devices| which is small at F2 scale.
+    set2: set[Any] = set()
+    if touched_target_ids:
+        from gard.core.scope_selector import evaluate as evaluate_selector
+
+        touched_targets = list(
+            session.scalars(
+                select(FirmwareTarget).where(FirmwareTarget.id.in_(touched_target_ids))
+            )
+        )
+        devices = list(session.scalars(select(Device)))
+        for device in devices:
+            if device.id in set2:
+                continue
+            facts = {
+                "vendor_normalized": device.vendor_normalized,
+                "platform_family": device.platform_family,
+                "region": device.region,
+                "site": device.site,
+                "role": device.role,
+                "hardware_revision": device.hardware_revision,
+                "lifecycle_state": device.lifecycle_state.value,
+            }
+            for t in touched_targets:
+                if evaluate_selector(t.scope_selector, facts).matched:
+                    set2.add(device.id)
+                    break
+
+    affected = set1 | set2
+    if not affected:
+        return 0
+
+    count = 0
+    for device_id in affected:
+        compliance_controller.evaluate(
+            session=session,
+            audit_session=audit_session,
+            device_id=device_id,
+            actor=actor,
+        )
+        count += 1
+
+    _log.info(
+        "firmware_catalog.post_reload_reevaluated",
+        devices=count,
+        touched_targets=len(touched_target_ids),
+    )
+    return count
 
 
 # ---- helper used by lifespan handler ---------------------------------

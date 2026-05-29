@@ -136,6 +136,47 @@ COUNT=$(curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/devices?lim
   | python3 -c "import json,sys; print(json.load(sys.stdin)['total_returned'])")
 dim "    $COUNT device(s) currently in the catalog"
 
+# F2 (002): trigger an explicit firmware-catalog reload inside the API
+# container so the bundled `gard-catalog/firmware/` fixtures land in the
+# DB. The API also reloads on lifespan startup, but re-running here makes
+# the seed deterministic regardless of when the catalog YAML last changed.
+bold "==> Reloading firmware catalog (F2)"
+docker compose -f "$COMPOSE_FILE" exec -T api \
+  python -m gard catalog reload --only firmware 2>&1 \
+  | tail -2 | sed 's/^/    /'
+
+bold "==> Firmware compliance snapshot (F2)"
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$API_BASE/api/v1/firmware/targets" 2>/dev/null \
+  | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+print(f'    {r[\"total_returned\"]} firmware target(s) loaded:')
+for t in r['items']:
+    print(f'      - {t[\"name\"]:<26} platform={t[\"platform_family\"]:<8} target_version={t[\"target_version\"]}')
+" 2>/dev/null || dim "    (skipped: firmware targets endpoint not reachable)"
+
+bold "==> Per-device firmware compliance"
+# Walk every device and hit the F2 compliance endpoint. Each call also
+# transitions the persisted lifecycle_state and emits one audit row.
+DEVICE_IDS=$(curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/devices?limit=200" \
+  | python3 -c "import json,sys; [print(d['facts']['id'], d['facts']['hostname']) for d in json.load(sys.stdin)['items']]")
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  DEV_ID="${line%% *}"
+  HOST="${line#* }"
+  STATE=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+    "$API_BASE/api/v1/devices/$DEV_ID/firmware-compliance" \
+    | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+state = r.get('state') or '?'
+tv = r.get('target_version') or '-'
+ov = r.get('observed_version') or '-'
+print(f'{state:<14} target_ver={tv:<12} observed={ov}')")
+  printf '    %-14s %s\n' "$HOST" "$STATE"
+done <<< "$DEVICE_IDS"
+
 bold "==> Done."
 echo
 echo "Token (also at .gard/token.jwt):"
