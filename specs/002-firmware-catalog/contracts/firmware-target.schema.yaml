@@ -1,0 +1,49 @@
+# JSON Schema 2020-12 for FirmwareTarget catalog YAML files.
+# Lives at gard-catalog/firmware/targets/*.yaml in the runtime tree.
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/firmware-target.schema.yaml
+title: FirmwareTarget
+description: |
+  A firmware-policy statement: "devices matching scope_selector on
+  platform_family should be running target_version". Catalog is the
+  source of truth; approval = merged PR.
+type: object
+required:
+  - catalog_schema_version
+  - name
+  - platform_family
+  - target_version
+  - scope_selector
+properties:
+  catalog_schema_version:
+    type: string
+    pattern: "^1\\.0\\.0$"
+    description: First version of the firmware-catalog YAML contract.
+  name:
+    type: string
+    minLength: 1
+    maxLength: 200
+    description: Human-readable handle (UNIQUE per active row).
+  platform_family:
+    type: string
+    minLength: 1
+    description: e.g. iosxr, junos, sros
+  target_version:
+    type: string
+    minLength: 1
+    description: Vendor's version string verbatim, e.g. "7.5.2"
+  scope_selector:
+    $ref: scope-selector.schema.yaml
+  valid_from:
+    type: [string, "null"]
+    format: date-time
+    description: Optional policy window start
+  valid_until:
+    type: [string, "null"]
+    format: date-time
+    description: Optional policy window end
+  notes:
+    type: [string, "null"]
+    description: Free-form operator notes (not surfaced as a Reason)
+additionalProperties: false

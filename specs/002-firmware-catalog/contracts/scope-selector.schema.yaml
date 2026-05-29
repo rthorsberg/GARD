@@ -1,0 +1,69 @@
+# JSON Schema 2020-12 for the shared scope-selector grammar.
+# Used by FirmwareTarget.scope_selector and PrerequisiteRule.applies_to.
+# All declared properties are AND'd together; no disjunction in v1.
+#
+# `tagged_with` is schema-valid but evaluator-deferred (F7 NetBox).
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/scope-selector.schema.yaml
+title: ScopeSelector
+description: |
+  Predicate over Device facts. Empty selectors are rejected (minProperties: 1).
+type: object
+minProperties: 1
+properties:
+  vendor_normalized:
+    type: string
+    minLength: 1
+    description: Exact match against Device.vendor_normalized
+  platform_family:
+    type: string
+    minLength: 1
+    description: Exact match against Device.platform_family
+  region_in:
+    type: array
+    items: {type: string, minLength: 1}
+    minItems: 1
+    uniqueItems: true
+    description: Device.region must be one of these values
+  site_in:
+    type: array
+    items: {type: string, minLength: 1}
+    minItems: 1
+    uniqueItems: true
+    description: Device.site must be one of these values
+  role_in:
+    type: array
+    items: {type: string, minLength: 1}
+    minItems: 1
+    uniqueItems: true
+    description: Device.role must be one of these values
+  hardware_revision_in:
+    type: array
+    items: {type: string, minLength: 1}
+    minItems: 1
+    uniqueItems: true
+    description: Device.hardware_revision must be one of these values
+  not_in_state:
+    type: array
+    items:
+      type: string
+      enum:
+        - imported
+        - classified
+        - target_defined
+        - compliant
+        - outside_target
+        - manual_review_required
+    minItems: 1
+    uniqueItems: true
+    description: Device.lifecycle_state must NOT be in this list
+  tagged_with:
+    type: array
+    items: {type: string, minLength: 1}
+    minItems: 1
+    uniqueItems: true
+    description: |
+      DEFERRED in v1 (F2). Loader accepts; evaluator returns unknown with
+      reasons[0].kind=predicate_deferred until F7 wires NetBox tag source.
+additionalProperties: false

@@ -1,0 +1,46 @@
+# JSON Schema 2020-12 for FirmwareUpgradePath catalog YAML files.
+# Each file declares one or more directed edges for a single platform_family.
+# Lives at gard-catalog/firmware/upgrade-paths/*.yaml.
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/firmware-upgrade-path.schema.yaml
+title: FirmwareUpgradePath
+description: |
+  Declares one or more directed edges in the upgrade graph for one
+  platform_family. The graph as a whole is the union of all edges across
+  all files for that family. Cycles are logged but not rejected at load
+  time (the traversal is defensive).
+type: object
+required: [catalog_schema_version, platform_family, edges]
+properties:
+  catalog_schema_version:
+    type: string
+    pattern: "^1\\.0\\.0$"
+  platform_family:
+    type: string
+    minLength: 1
+  edges:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [from_version, to_version]
+      properties:
+        from_version:
+          type: string
+          minLength: 1
+        to_version:
+          type: string
+          minLength: 1
+        weight:
+          type: integer
+          minimum: 1
+          default: 1
+          description: |
+            Dijkstra cost. Operators mark "stability cost" for
+            non-preferred hops (e.g. version pairs known to need extra
+            babysitting).
+        notes:
+          type: [string, "null"]
+      additionalProperties: false
+additionalProperties: false
