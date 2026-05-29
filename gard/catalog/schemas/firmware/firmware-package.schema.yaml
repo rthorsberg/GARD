@@ -1,0 +1,62 @@
+# JSON Schema 2020-12 for FirmwarePackage catalog YAML files.
+# Lives at gard-catalog/firmware/packages/*.yaml.
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/firmware-package.schema.yaml
+title: FirmwarePackage
+description: |
+  Concrete installer-artefact metadata. The byte_size + sha256 declared
+  here are the contract; a future uploaded blob is verified against them.
+type: object
+required:
+  - catalog_schema_version
+  - vendor
+  - platform_family
+  - version
+  - sha256
+  - byte_size
+  - signed_by
+properties:
+  catalog_schema_version:
+    type: string
+    pattern: "^1\\.0\\.0$"
+  vendor:
+    type: string
+    enum: [cisco, juniper, nokia]
+    description: |
+      Normalized vendor handle. v1 starts narrow; extending the enum is
+      a minor schema bump (1.0.0 → 1.1.0). Adding via CSV import does
+      not bypass this list.
+  platform_family:
+    type: string
+    minLength: 1
+  version:
+    type: string
+    minLength: 1
+  sha256:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: Hex-encoded SHA-256 of the artefact bytes.
+  byte_size:
+    type: integer
+    minimum: 1
+    maximum: 5368709120     # 5 GiB cap — matches GARD_FIRMWARE_BLOB_MAX_BYTES default
+  signed_by:
+    type: string
+    minLength: 1
+    description: |
+      Operator-asserted signing identity (e.g. "cisco", "juniper"). v1
+      does not verify the signature cryptographically — that lands when
+      we wire up sigstore/x509 in a later feature.
+  release_date:
+    type: [string, "null"]
+    format: date
+  download_url:
+    type: [string, "null"]
+    format: uri
+    description: |
+      Canonical vendor URL. GARD never fetches this; it's metadata for
+      operators.
+  notes:
+    type: [string, "null"]
+additionalProperties: false

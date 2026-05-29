@@ -48,6 +48,14 @@ def utcnow() -> _dt.datetime:
 from gard.models.api_token import ApiToken  # noqa: E402
 from gard.models.audit_event import AuditChainHead, AuditEvent  # noqa: E402
 from gard.models.device import Device  # noqa: E402
+from gard.models.firmware_package import FirmwarePackage  # noqa: E402
+from gard.models.firmware_prerequisite import (  # noqa: E402
+    FirmwarePrerequisiteRule,
+    PredicateKind,
+    PrereqSeverity,
+)
+from gard.models.firmware_target import FirmwareTarget  # noqa: E402
+from gard.models.firmware_upgrade_path import FirmwareUpgradePath  # noqa: E402
 from gard.models.import_job import ImportJob  # noqa: E402
 from gard.models.lifecycle_evidence import LifecycleEvidence  # noqa: E402
 from gard.models.manual_mapping import ManualMapping  # noqa: E402
@@ -61,10 +69,16 @@ __all__ = [
     "Base",
     "Device",
     "DeviceObservation",
+    "FirmwarePackage",
+    "FirmwarePrerequisiteRule",
+    "FirmwareTarget",
+    "FirmwareUpgradePath",
     "ImportJob",
     "LifecycleEvidence",
     "ManualMapping",
     "NormalizationRule",
+    "PredicateKind",
+    "PrereqSeverity",
     "utcnow",
     "uuid7_default",
 ]

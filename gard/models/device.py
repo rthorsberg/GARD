@@ -10,11 +10,12 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Index,
+    Integer,
     String,
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.dialects.postgresql import ARRAY, INET
 from sqlalchemy.orm import Mapped, mapped_column
 
 from gard.models import Base, utcnow, uuid7_default
@@ -39,6 +40,11 @@ class Device(Base):
     model_normalized: Mapped[str | None] = mapped_column(String, nullable=True)
     platform_family: Mapped[str | None] = mapped_column(String, nullable=True)
     hardware_revision: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # F2 — new optional observation columns (Constitution III: never coerced).
+    ram_mb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    disk_mb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    licenses: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
     source_system: Mapped[str] = mapped_column(String, nullable=False)
     lifecycle_state: Mapped[LifecycleState] = mapped_column(
