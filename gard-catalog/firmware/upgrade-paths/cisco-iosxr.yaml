@@ -1,0 +1,18 @@
+catalog_schema_version: "1.0.0"
+platform_family: iosxr
+edges:
+  - from_version: "7.5.2"
+    to_version: "7.7.1"
+    weight: 1
+    notes: vendor-recommended intermediate hop
+  - from_version: "7.7.1"
+    to_version: "7.8.1"
+    weight: 1
+    notes: standard next-release hop
+  - from_version: "7.5.2"
+    to_version: "7.8.1"
+    weight: 5
+    notes: |
+      Skip-version edge, supported but weight-penalised. Dijkstra over the graph
+      will prefer the two-hop chain 7.5.2 -> 7.7.1 -> 7.8.1 (total weight 2)
+      unless an operator explicitly removes the intermediate edge.

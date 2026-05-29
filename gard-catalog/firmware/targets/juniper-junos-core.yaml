@@ -1,0 +1,12 @@
+catalog_schema_version: "1.0.0"
+name: juniper-junos-core
+platform_family: junos
+target_version: "23.2R1"
+scope_selector:
+  vendor_normalized: juniper
+  platform_family: junos
+notes: |
+  Baseline target for Juniper Junos core routers. Together with cisco-iosxr-edge
+  these two targets cover four of the five seed devices; the Nokia SR-OS device
+  is intentionally outside any target so the operator can observe the
+  "no_target_matched" reason in the compliance envelope.
