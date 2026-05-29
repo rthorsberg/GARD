@@ -80,6 +80,10 @@ class EvidenceType(enum.StrEnum):
     manual_mapping = "manual_mapping"
     rule_override = "rule_override"
     re_evaluation = "re_evaluation"
+    # F2: chain-of-custody record for a firmware blob upload. Carries the
+    # computed sha256, byte count, and storage path so a future restore
+    # can re-verify the artefact against the package row's declared sha.
+    firmware_package_upload = "firmware_package_upload"
 
 
 class Role(enum.StrEnum):

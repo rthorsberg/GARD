@@ -1,0 +1,17 @@
+catalog_schema_version: "1.0.0"
+vendor: cisco
+platform_family: iosxr
+# A deliberately tiny "package" used by the F2 dev smoke-test to exercise
+# the blob upload + download verification path end-to-end without
+# manufacturing multi-GiB files. The version string is reserved by
+# convention (zero-prefixed) so it never collides with real Cisco IOS XR
+# release numbering.
+version: "0.0.1-smoketest"
+sha256: 53cd002d4afbd3fcf0e710f3157b96e4e209aa2fd4f7a1d8e927f6f57c978c2e
+byte_size: 22
+signed_by: gard-dev
+release_date: "2026-05-30"
+notes: |
+  Dev-only smoke-test artefact. The bytes are the ASCII string
+  "gard-blob-test-payload" (22 bytes). Uploading a different file against
+  this package id surfaces the BLOB_CHECKSUM_MISMATCH path (HTTP 422).
