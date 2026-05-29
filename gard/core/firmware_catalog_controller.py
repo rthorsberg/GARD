@@ -60,7 +60,7 @@ from gard.models import (
     FirmwareTarget,
     FirmwareUpgradePath,
 )
-from gard.models._enums import ActorType, AuditResult, LifecycleState
+from gard.models._enums import ActorType, AuditResult, EvidenceType, LifecycleState
 
 _log = get_logger(__name__)
 
@@ -214,6 +214,63 @@ def _emit_delta_audit(
     )
 
 
+def _emit_catalog_load_evidence(
+    *,
+    audit_session: Session,
+    report: LoadReport,
+    sha_map: dict[str, str | None],
+    dirty: bool,
+    actor: str,
+) -> None:
+    """Emit one chain-of-custody evidence row per reload pass (T059).
+
+    `source_checksum` is SHA-256 over the lexicographically-sorted list
+    of `<relpath>:<sha>` pairs. A later auditor can recompute the same
+    digest from the file list to confirm the database came from exactly
+    those commits.
+
+    Dirty-tree loads (where some SHAs are ``None``) still emit a row;
+    the ``after_state.dirty=True`` flag signals that the fingerprint
+    is not reproducible against the index alone.
+    """
+    # Lazy import to avoid a top-level cycle with gard.core.evidence,
+    # which imports gard.models which (indirectly) imports the catalog
+    # tables.
+    import hashlib
+
+    from gard.core.evidence import emit as evidence_emit
+
+    sorted_pairs = sorted(
+        (relpath, sha_map.get(relpath) or "DIRTY")
+        for relpath in report.file_relpaths_seen
+    )
+    fingerprint_input = "\n".join(f"{r}:{s}" for r, s in sorted_pairs).encode("utf-8")
+    fingerprint = hashlib.sha256(fingerprint_input).hexdigest()
+
+    evidence_emit(
+        session=audit_session,
+        evidence_type=EvidenceType.firmware_catalog_load,
+        subject_type="FirmwareCatalog",
+        subject_id=get_correlation_id() or "no-correlation-id",
+        actor=actor,
+        after_state={
+            "files": len(report.file_relpaths_seen),
+            "loaded": report.loaded,
+            "removed": report.removed,
+            "unchanged": report.unchanged,
+            "dirty": dirty,
+            "fingerprint_kind": "sha256_over_sorted_relpath_colon_sha",
+        },
+        source_checksum=fingerprint,
+        references={
+            "files": [
+                {"relpath": r, "git_sha": s if s != "DIRTY" else None}
+                for r, s in sorted_pairs
+            ],
+        },
+    )
+
+
 def _emit_reload_failed(
     *,
     audit_session: Session,
@@ -332,6 +389,21 @@ def reload(
         session=session,
         audit_session=audit_session,
         report=report,
+        actor=actor,
+    )
+
+    # T059: one chain-of-custody evidence row per reload pass. The
+    # `source_checksum` is the SHA-256 of the sorted concatenation of
+    # the loaded git SHAs — a Merkle-style fingerprint that lets a
+    # future auditor confirm "this database state came from exactly
+    # these N files at exactly these commits". A reload that only
+    # finds `unchanged` deltas still emits one row, so the audit chain
+    # has a heartbeat per call.
+    _emit_catalog_load_evidence(
+        audit_session=audit_session,
+        report=report,
+        sha_map=sha_map,
+        dirty=dirty,
         actor=actor,
     )
 

@@ -84,6 +84,11 @@ class EvidenceType(enum.StrEnum):
     # computed sha256, byte count, and storage path so a future restore
     # can re-verify the artefact against the package row's declared sha.
     firmware_package_upload = "firmware_package_upload"
+    # F2 (T059): one row per firmware-catalog reload pass. The
+    # `source_checksum` is the Merkle-style SHA-256 over the sorted list
+    # of loaded git SHAs, so a later auditor can confirm "this DB state
+    # came from exactly these N files at exactly these commits".
+    firmware_catalog_load = "firmware_catalog_load"
 
 
 class Role(enum.StrEnum):

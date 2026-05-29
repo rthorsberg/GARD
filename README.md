@@ -114,8 +114,60 @@ Complexity Tracking section and be approved before implementation.
 - ✅ Constitution v1.0.0 ratified (2026-05-27)
 - ✅ Spec Kit + Git extension installed
 - ✅ GARD seed material imported (`gard-speckit-start/`)
-- ⏭️ Next: first feature spec — the MVP vertical slice from
-`[gard-speckit-start/specs/04-mvp-scope.md](gard-speckit-start/specs/04-mvp-scope.md)`
+- ✅ **F1 — Device Import & Normalize** shipped on `main` (CSV import,
+  normalization rule engine, audit/evidence pipeline, RBAC, JWT auth,
+  REST API, Docker Compose dev env, CI)
+- ✅ **F2 — Firmware Catalog** shipped on `002-firmware-catalog` (PR #2)
+  REST-complete: catalog YAML loader, per-device firmware-compliance
+  endpoint, upgrade-path Dijkstra API, prerequisite rules, blob
+  upload/download with verified SHA-256 round-trip, Merkle-style
+  chain-of-custody evidence per reload. MCP tools for F2 deferred to
+  follow-up feature `003-mcp-firmware-tools` (ADR-0013).
+- ⏭️ **Next**: F3 — Compliance & Drift Evaluation (drift taxonomy,
+  explainable response envelope, readiness signal).
+
+## Quickstart
+
+The local stack is a 3-container Docker Compose: Postgres, the GARD
+API, and a one-shot Alembic migration runner.
+
+```bash
+make up-build          # build images + start stack
+make seed              # mint a dev JWT + import 5 sample devices +
+                       # reload the firmware catalog + walk per-device
+                       # firmware compliance
+open http://127.0.0.1:8080/docs    # interactive Swagger UI
+```
+
+After `make seed` you should see:
+
+```
+==> Firmware compliance snapshot (F2)
+    2 firmware target(s) loaded:
+      - cisco-iosxr-edge       platform=iosxr   target_version=7.8.1
+      - juniper-junos-core     platform=junos   target_version=23.2R1
+
+==> Per-device firmware compliance
+    r5.bergen     compliant      target_ver=23.2R1     observed=23.2R1
+    r4.bergen     compliant      target_ver=7.8.1      observed=7.8.1
+    r3.oslo       classified     target_ver=-          observed=23.10.R3
+    r2.oslo       outside_target target_ver=23.2R1     observed=22.4R3-S2
+    r1.oslo       outside_target target_ver=7.8.1      observed=7.5.2
+```
+
+The `r3.oslo` device shows `classified` (no firmware target matches
+its Nokia SR-OS platform) by design — operators get to observe the
+`no_target_matched` reason in the compliance envelope.
+
+Other useful targets:
+
+| Target | What it does |
+|---|---|
+| `make reset` | Wipe Postgres + blob volumes, rebuild image, reseed |
+| `make logs` | Tail the API container |
+| `make token` | Mint a fresh dev JWT (printed to stdout) |
+| `make test` | Run the local test suite against the running stack |
+| `make lint` | `ruff format --check` + `ruff check` |
 
 ## North star
 

@@ -28,10 +28,10 @@
 
 ## v1 features
 
-| # | Feature | Slug | Delivers | Depends on |
-|---|---|---|---|---|
-| F1 | Device Import & Normalize | `device-import-normalize` | CSV import endpoint; `Device` + `DeviceObservation`; normalization rule engine (lifecycle-as-code); import summary + error report; transitions `imported → classified`. **Carries the platform-foundation work** (runtime/lang ADR, Postgres + migrations, auth + RBAC scaffolding, audit pipeline with `correlation_id`, `LifecycleEvidence` schema + emit helper, structured logging, REST + MCP skeletons, Docker Compose dev env, CI). First MCP tools: `list_devices`, `get_device_lifecycle_status`. | — |
-| F2 | Firmware Catalog | `firmware-catalog` | `FirmwareTarget`, `FirmwarePackage`, `UpgradePath`, `PrerequisiteRule`; YAML loader (lifecycle-as-code) + API CRUD; approval workflow for targets/packages; SHA-256 checksum verification for packages. MCP tools: `get_target_firmware`, `get_upgrade_path`. | F1 |
+| # | Feature | Slug | Status | Delivers | Depends on |
+|---|---|---|---|---|---|
+| F1 | Device Import & Normalize | `device-import-normalize` | **shipped** (`main`) | CSV import endpoint; `Device` + `DeviceObservation`; normalization rule engine (lifecycle-as-code); import summary + error report; transitions `imported → classified`. **Carries the platform-foundation work** (runtime/lang ADR, Postgres + migrations, auth + RBAC scaffolding, audit pipeline with `correlation_id`, `LifecycleEvidence` schema + emit helper, structured logging, REST + MCP skeletons, Docker Compose dev env, CI). First MCP tools: `list_devices`, `get_device_lifecycle_status` *(MCP transport deferred — see ADR-0013)*. | — |
+| F2 | Firmware Catalog | `firmware-catalog` | **shipped** (PR #2) — REST complete, MCP deferred to F003 | `FirmwareTarget`, `FirmwarePackage`, `UpgradePath`, `PrerequisiteRule`; YAML loader (lifecycle-as-code) + reload pipeline with Merkle-style chain-of-custody evidence; per-device firmware-compliance endpoint (`target_defined`/`compliant`/`outside_target`/`unknown`); Dijkstra upgrade-path API; SHA-256 verified blob upload/download with on-the-fly tamper detection on read. MCP tools `get_target_firmware`/`get_upgrade_path`/`list_*` — **deferred to F003** per ADR-0013 (REST surface delivers equivalent facts). | F1 |
 | F3 | Compliance & Drift Evaluation | `compliance-evaluation` | `ComplianceEvaluation` controller; drift taxonomy (target / catalog / package / rule / evidence / discovery / exception drift); explainable response envelope (`state / summary / facts / reasons / recommended_actions / confidence`); transitions `target_defined → compliant / outside_target`. MCP tools: `count_devices_outside_target`, `list_devices_outside_target`, `get_compliance_summary`, `get_unknown_lifecycle_items`. | F1, F2 |
 | F4 | Readiness & Prerequisites | `readiness-prerequisites` | `ReadinessEvaluation` controller; prerequisite rule engine; transitions `outside_target → ready_for_uplift / blocked`. MCP tools: `get_readiness_summary`, `explain_blockers`. | F2, F3 |
 | F5 | Uplift Planning & Waves | `uplift-planning-waves` | `UpliftPlan` (dry-run only in v1); `UpliftWave` with approval gates; `Exception` entity; transitions `ready_for_uplift → uplift_planned → approval_pending → approved`. MCP tools: `create_uplift_wave_draft`, `create_exception_review_draft`, and the four reporting tools. | F3, F4 |
@@ -62,12 +62,14 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0008 Auth & RBAC model** (during F1)
 - **ADR-0009 Audit & evidence storage strategy** (during F1)
 - **ADR-0010 Normalization rules format & resolution order** (during F1)
-- **ADR-0011 Catalog YAML schema & precedence** (during F2)
-- **ADR-0012 Drift taxonomy formalization** (during F3)
-- **ADR-0013 Prerequisite rule grammar** (during F4)
-- **ADR-0014 Plan vs wave lifecycle and approval data model** (during F5)
-- **ADR-0015 NetBox integration boundary & sync model** (during F7)
-- **ADR-0016 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
+- **ADR-0011 Catalog YAML schema & precedence** (during F2) — *shipped*
+- **ADR-0012 `LifecycleState.unknown` as first-class state** (during F2) — *shipped, reassigned from "drift taxonomy"; the drift-taxonomy decision moves to F3*
+- **ADR-0013 MCP firmware tools deferred to F003** (during F2) — *shipped, reassigned from "prerequisite rule grammar"; the prereq-grammar decision moves to F4*
+- **ADR-0014 Drift taxonomy formalization** (during F3) — *renumbered from planned ADR-0012*
+- **ADR-0015 Prerequisite rule grammar** (during F4) — *renumbered from planned ADR-0013*
+- **ADR-0016 Plan vs wave lifecycle and approval data model** (during F5) — *renumbered from planned ADR-0014*
+- **ADR-0017 NetBox integration boundary & sync model** (during F7) — *renumbered from planned ADR-0015*
+- **ADR-0018 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — *renumbered from planned ADR-0016*. Formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
 
 This list is non-binding for the roadmap itself; each `/speckit-plan` may
 add, remove, or rename ADRs.
