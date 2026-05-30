@@ -1,0 +1,9 @@
+catalog_schema_version: "1.0.0"
+name: iosxr-minimum-disk
+applies_to:
+  vendor_normalized: cisco
+  platform_family: iosxr
+predicate:
+  kind: min_disk_mb
+  min_mb: 2048
+severity: required

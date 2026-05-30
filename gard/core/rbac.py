@@ -36,6 +36,12 @@ class Permission:
     MANAGE_TOKENS = "token.manage"
     MANAGE_MCP_TOOLS = "mcp.tool.manage"
 
+    # ---- F2: firmware catalog --------------------------------------------
+    # NB: no MANAGE_FIRMWARE_CATALOG permission exists — catalog mutation is
+    # by `git push`, not by role (ADR-0011 §7).
+    READ_FIRMWARE_CATALOG = "firmware_catalog.read"
+    MANAGE_FIRMWARE_BLOB = "firmware_catalog.blob.manage"
+
 
 # fmt: off
 _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
@@ -46,6 +52,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_AUDIT,
         Permission.READ_EVIDENCE,
         Permission.READ_RULE,
+        Permission.READ_FIRMWARE_CATALOG,
     }),
     Role.lifecycle_manager: frozenset({
         Permission.READ_DEVICE,
@@ -58,6 +65,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.REEVALUATE_OBSERVATION,
         Permission.MANAGE_RULES,
         Permission.CREATE_MANUAL_MAPPING,
+        Permission.READ_FIRMWARE_CATALOG,
+        Permission.MANAGE_FIRMWARE_BLOB,
     }),
     Role.mcp_client: frozenset({
         Permission.READ_DEVICE,
@@ -65,6 +74,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_OBSERVATION,
         Permission.READ_RULE,
         Permission.INVOKE_MCP_TOOL,
+        Permission.READ_FIRMWARE_CATALOG,
     }),
     Role.system_admin: frozenset({
         Permission.READ_DEVICE,
@@ -80,6 +90,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.INVOKE_MCP_TOOL,
         Permission.MANAGE_TOKENS,
         Permission.MANAGE_MCP_TOOLS,
+        Permission.READ_FIRMWARE_CATALOG,
+        Permission.MANAGE_FIRMWARE_BLOB,
     }),
 }
 # fmt: on

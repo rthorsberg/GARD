@@ -1,0 +1,467 @@
+openapi: 3.1.0
+info:
+  title: GARD — Firmware Catalog (F2 additions to the REST surface)
+  version: 0.2.0
+  description: |
+    F2 augments the F1 REST API with firmware-catalog read endpoints, a single
+    per-device compliance read, and an optional blob upload/download pair.
+    All `/api/v1/firmware/...` and `/api/v1/devices/{id}/firmware-compliance`
+    endpoints require Bearer auth with the `READ_FIRMWARE_CATALOG` permission
+    (or higher); the blob upload requires `MANAGE_FIRMWARE_BLOB`. There is no
+    `MANAGE_FIRMWARE_CATALOG` permission — catalog mutation is by git push,
+    not by role.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local dev (compose stack)
+
+components:
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ----------- Shared error envelope (matches F1) -----------
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object, nullable: true, additionalProperties: true}
+            correlation_id: {type: string, nullable: true}
+
+    # ----------- Scope selector (shared with catalog YAML) -----------
+    ScopeSelector:
+      type: object
+      minProperties: 1
+      properties:
+        vendor_normalized: {type: string}
+        platform_family: {type: string}
+        region_in: {type: array, items: {type: string}, minItems: 1}
+        site_in: {type: array, items: {type: string}, minItems: 1}
+        role_in: {type: array, items: {type: string}, minItems: 1}
+        hardware_revision_in: {type: array, items: {type: string}, minItems: 1}
+        not_in_state:
+          type: array
+          items:
+            type: string
+            enum: [imported, classified, target_defined, compliant, outside_target, manual_review_required]
+          minItems: 1
+        tagged_with: {type: array, items: {type: string}, minItems: 1}
+      additionalProperties: false
+
+    # ----------- Firmware target -----------
+    FirmwareTarget:
+      type: object
+      required: [id, name, platform_family, target_version, scope_selector, loaded_at, catalog_schema_version]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        platform_family: {type: string}
+        target_version: {type: string}
+        scope_selector: {$ref: "#/components/schemas/ScopeSelector"}
+        valid_from: {type: string, format: date-time, nullable: true}
+        valid_until: {type: string, format: date-time, nullable: true}
+        notes: {type: string, nullable: true}
+        loaded_at: {type: string, format: date-time}
+        loaded_from_git_sha: {type: string, nullable: true}
+        source_file_relpath: {type: string}
+        catalog_schema_version: {type: string}
+    FirmwareTargetList:
+      type: object
+      required: [items, total_returned]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/FirmwareTarget"}}
+        total_returned: {type: integer, minimum: 0}
+        next_page_token: {type: string, nullable: true}
+
+    # ----------- Firmware package -----------
+    FirmwarePackage:
+      type: object
+      required: [id, vendor, platform_family, version, sha256, byte_size, signed_by, blob_present]
+      properties:
+        id: {type: string, format: uuid}
+        vendor: {type: string}
+        platform_family: {type: string}
+        version: {type: string}
+        sha256: {type: string, pattern: "^[0-9a-f]{64}$"}
+        byte_size: {type: integer, minimum: 1}
+        signed_by: {type: string}
+        release_date: {type: string, format: date, nullable: true}
+        download_url: {type: string, format: uri, nullable: true}
+        notes: {type: string, nullable: true}
+        blob_present: {type: boolean}
+        blob_stored_at: {type: string, format: date-time, nullable: true}
+        loaded_at: {type: string, format: date-time}
+        loaded_from_git_sha: {type: string, nullable: true}
+        source_file_relpath: {type: string}
+    FirmwarePackageList:
+      type: object
+      required: [items, total_returned]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/FirmwarePackage"}}
+        total_returned: {type: integer, minimum: 0}
+        next_page_token: {type: string, nullable: true}
+
+    # ----------- Upgrade path edges + path responses -----------
+    UpgradePathEdge:
+      type: object
+      required: [id, platform_family, from_version, to_version, weight]
+      properties:
+        id: {type: string, format: uuid}
+        platform_family: {type: string}
+        from_version: {type: string}
+        to_version: {type: string}
+        weight: {type: integer, minimum: 1}
+        notes: {type: string, nullable: true}
+        loaded_at: {type: string, format: date-time}
+        loaded_from_git_sha: {type: string, nullable: true}
+        source_file_relpath: {type: string}
+    UpgradePathEdgeList:
+      type: object
+      required: [items, total_returned]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/UpgradePathEdge"}}
+        total_returned: {type: integer, minimum: 0}
+    UpgradePathResolution:
+      type: object
+      required: [platform_family, from_version, to_version, chain, hop_count, reasons]
+      properties:
+        platform_family: {type: string}
+        from_version: {type: string}
+        to_version: {type: string}
+        chain:
+          type: array
+          description: Ordered list of versions from source to target inclusive. Empty when no path exists.
+          items: {type: string}
+        hop_count: {type: integer, minimum: 0}
+        total_weight: {type: integer, minimum: 0, nullable: true}
+        reasons:
+          type: array
+          items:
+            type: object
+            required: [kind]
+            properties:
+              kind: {type: string, enum: [no_path, cycle_detected, zero_hop]}
+              detail: {type: string, nullable: true}
+
+    # ----------- Prerequisite rule -----------
+    PrerequisiteRule:
+      type: object
+      required: [id, name, applies_to, predicate_kind, predicate_args, severity, evaluable]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        applies_to: {$ref: "#/components/schemas/ScopeSelector"}
+        predicate_kind:
+          type: string
+          enum: [min_ram_mb, min_disk_mb, min_current_version, hardware_revision_in, license_present, intermediate_version_required, not_in_state, region_in, tagged_with]
+        predicate_args:
+          type: object
+          additionalProperties: true
+        severity: {type: string, enum: [required, recommended]}
+        evaluable:
+          type: boolean
+          description: false only when predicate_kind = tagged_with in v1 (F7 makes it true).
+        loaded_at: {type: string, format: date-time}
+        loaded_from_git_sha: {type: string, nullable: true}
+        source_file_relpath: {type: string}
+    PrerequisiteRuleList:
+      type: object
+      required: [items, total_returned]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/PrerequisiteRule"}}
+        total_returned: {type: integer, minimum: 0}
+
+    # ----------- Firmware compliance envelope -----------
+    ComplianceReason:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum:
+            - target_matched
+            - target_runner_up
+            - version_match
+            - version_mismatch
+            - missing_observation
+            - no_target_matched
+            - empty_catalog
+        ref: {type: string, nullable: true, description: "When kind=target_matched or target_runner_up, the FirmwareTarget id."}
+        detail: {type: string, nullable: true}
+    FirmwareComplianceEnvelope:
+      type: object
+      required: [state, summary, facts, reasons, confidence, as_of, correlation_id]
+      properties:
+        state:
+          type: string
+          enum: [classified, target_defined, compliant, outside_target, unknown]
+          description: |
+            unknown is returned when observation is missing or the catalog is
+            empty. classified (no transition) is returned when no target's
+            scope_selector matches the device.
+        summary: {type: string}
+        target_ref: {type: string, format: uuid, nullable: true}
+        target_version: {type: string, nullable: true}
+        observed_version: {type: string, nullable: true}
+        facts:
+          type: object
+          description: Snapshot of relevant Device facts (vendor_normalized, platform_family, region, site, role, hardware_revision, observed_firmware).
+          additionalProperties: true
+        reasons:
+          type: array
+          minItems: 1
+          items: {$ref: "#/components/schemas/ComplianceReason"}
+        recommended_actions:
+          type: array
+          description: Always empty in F2; F3 populates this.
+          maxItems: 0
+          items: {type: object}
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        as_of: {type: string, format: date-time}
+        correlation_id: {type: string}
+
+security:
+  - HTTPBearer: []
+
+paths:
+  # =========================== firmware/targets ===========================
+  /api/v1/firmware/targets:
+    get:
+      tags: [firmware]
+      summary: List firmware targets
+      operationId: listFirmwareTargets
+      parameters:
+        - in: query
+          name: platform_family
+          schema: {type: string}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 500, default: 50}
+        - in: query
+          name: page_token
+          schema: {type: string, nullable: true}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FirmwareTargetList"}
+        "401":
+          description: Missing or invalid bearer
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+        "403":
+          description: Missing READ_FIRMWARE_CATALOG
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+
+  /api/v1/firmware/targets/{id}:
+    get:
+      tags: [firmware]
+      summary: Get one firmware target
+      operationId: getFirmwareTarget
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/FirmwareTarget"}}}
+        "404":
+          description: Not found
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+
+  # =========================== firmware/packages ===========================
+  /api/v1/firmware/packages:
+    get:
+      tags: [firmware]
+      summary: List firmware packages
+      operationId: listFirmwarePackages
+      parameters:
+        - in: query
+          name: vendor
+          schema: {type: string}
+        - in: query
+          name: platform_family
+          schema: {type: string}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 500, default: 50}
+        - in: query
+          name: page_token
+          schema: {type: string, nullable: true}
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/FirmwarePackageList"}}}
+
+  /api/v1/firmware/packages/{id}:
+    get:
+      tags: [firmware]
+      summary: Get one firmware package (metadata)
+      operationId: getFirmwarePackage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/FirmwarePackage"}}}
+        "404":
+          description: Not found
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+
+  /api/v1/firmware/packages/{id}/blob:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [firmware]
+      summary: Upload the firmware package binary (verifies SHA-256)
+      operationId: uploadFirmwarePackageBlob
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [computed_sha256, bytes_written]
+                properties:
+                  computed_sha256: {type: string, pattern: "^[0-9a-f]{64}$"}
+                  bytes_written: {type: integer, minimum: 1}
+        "403":
+          description: Missing MANAGE_FIRMWARE_BLOB
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+        "409":
+          description: blob_upload_in_progress (concurrent upload)
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+        "413":
+          description: blob_too_large
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+        "422":
+          description: blob_checksum_mismatch
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+    get:
+      tags: [firmware]
+      summary: Stream the firmware package binary (verifies SHA-256 on read)
+      operationId: downloadFirmwarePackageBlob
+      responses:
+        "200":
+          description: OK — verified stream
+          headers:
+            X-GARD-SHA256:
+              description: Hex SHA-256 of the bytes streamed
+              schema: {type: string, pattern: "^[0-9a-f]{64}$"}
+            Content-Length:
+              schema: {type: integer}
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        "404":
+          description: blob_not_present (catalog entry exists but no blob uploaded)
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+        "500":
+          description: blob_checksum_mismatch_on_read (storage tampered)
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+
+  # =========================== firmware/upgrade-paths ===========================
+  /api/v1/firmware/upgrade-paths:
+    get:
+      tags: [firmware]
+      summary: List declared upgrade edges OR resolve a path
+      description: |
+        Two modes determined by query params:
+          - `platform_family` only → returns all edges for that platform (list).
+          - `platform_family` + `from_version` + `to_version` → returns the
+            shortest legal chain (resolution).
+      operationId: listOrResolveUpgradePaths
+      parameters:
+        - in: query
+          name: platform_family
+          required: true
+          schema: {type: string}
+        - in: query
+          name: from_version
+          schema: {type: string}
+        - in: query
+          name: to_version
+          schema: {type: string}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UpgradePathEdgeList"
+                  - $ref: "#/components/schemas/UpgradePathResolution"
+        "404":
+          description: platform_family not in catalog
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}
+
+  # =========================== firmware/prerequisites ===========================
+  /api/v1/firmware/prerequisites:
+    get:
+      tags: [firmware]
+      summary: List prerequisite rules (evaluation is F4's responsibility)
+      operationId: listPrerequisiteRules
+      parameters:
+        - in: query
+          name: predicate_kind
+          schema:
+            type: string
+            enum: [min_ram_mb, min_disk_mb, min_current_version, hardware_revision_in, license_present, intermediate_version_required, not_in_state, region_in, tagged_with]
+        - in: query
+          name: evaluable
+          schema: {type: boolean}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 500, default: 50}
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/PrerequisiteRuleList"}}}
+
+  # =========================== device firmware compliance ===========================
+  /api/v1/devices/{id}/firmware-compliance:
+    get:
+      tags: [devices, firmware]
+      summary: Resolve and return firmware-target compliance for one device
+      operationId: getDeviceFirmwareCompliance
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: OK — envelope returned for every reachable state including unknown
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FirmwareComplianceEnvelope"}
+        "404":
+          description: device not found
+          content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}

@@ -28,7 +28,8 @@ RUN uv pip install --system --no-deps --target /install . \
       "mcp>=1.0,<2" "authlib>=1.3,<2" "python-jose[cryptography]>=3.3,<4" \
       "structlog>=24.1,<25" "httpx>=0.27,<1" "uvicorn[standard]>=0.30,<0.40" \
       "uuid7>=0.1,<1" "pyyaml>=6.0,<7" "jsonschema>=4.22,<5" \
-      "python-multipart>=0.0.9,<1"
+      "python-multipart>=0.0.9,<1" \
+      "networkx>=3.2,<4"
 
 # ---------- runtime ----------
 FROM base AS runtime
@@ -37,7 +38,12 @@ COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 COPY gard ./gard
 COPY gard-catalog ./gard-catalog
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh && chown -R gard:gard /app
+# Pre-create the blob root so the Docker named-volume inherits ownership
+# from the image directory rather than getting root:root by default.
+# F2's LocalFsBlobStore writes via the gard user (uid 10001).
+RUN mkdir -p /var/lib/gard/blobs \
+ && chmod +x /usr/local/bin/entrypoint.sh \
+ && chown -R gard:gard /app /var/lib/gard
 
 USER gard
 EXPOSE 8000

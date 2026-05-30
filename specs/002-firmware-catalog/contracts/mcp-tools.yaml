@@ -1,0 +1,128 @@
+# GARD MCP tool surface — F2 additions
+#
+# Five new tools, all read-only, all bounded. Continues the F1 contract:
+# tools share the auth/RBAC pipeline with REST, emit identical audit
+# records, and carry the correlation_id through. No catalog mutation
+# tool ships in F2; that is deferred to F5 (uplift planning).
+#
+# Disallowed tools (rejected with code=tool_not_found):
+#   execute_sql, run_shell, read_file, write_file, http_request,
+#   propose_firmware_target_draft   # explicitly deferred to F5
+#
+# The MCP server emits AuditEvent action=mcp.disallowed_tool_attempt
+# every time a disallowed tool is invoked.
+
+mcp_protocol: 2025-03-26                   # matches F1's transport
+transport: streamable-http
+tools_introduced_in: 002-firmware-catalog
+
+tools:
+  - name: get_target_firmware
+    description: |
+      Resolve the firmware target policy for one device. Returns the same
+      envelope as GET /api/v1/devices/{id}/firmware-compliance, including
+      state in {classified, target_defined, compliant, outside_target,
+      unknown}. Never throws for an unmatched device; returns state=
+      classified with reasons[0].kind=no_target_matched. Required
+      permission: READ_FIRMWARE_CATALOG.
+    read_only: true
+    input_schema:
+      type: object
+      required: [device_id]
+      properties:
+        device_id: {type: string, format: uuid}
+      additionalProperties: false
+    output_schema_ref: ../contracts/rest-openapi.yaml#/components/schemas/FirmwareComplianceEnvelope
+    bounds:
+      max_response_bytes: 16384
+
+  - name: get_upgrade_path
+    description: |
+      Compute the shortest legal upgrade chain from `from_version` to
+      `to_version` for a `platform_family`. Returns chain=[v1,...,vN] on
+      success, chain=[] with reasons[0].kind=no_path when no chain
+      exists, chain=[v] with hop_count=0 when from_version == to_version.
+      Cycle-safe (visited-set Dijkstra). Required permission:
+      READ_FIRMWARE_CATALOG.
+    read_only: true
+    input_schema:
+      type: object
+      required: [platform_family, from_version, to_version]
+      properties:
+        platform_family: {type: string, minLength: 1}
+        from_version: {type: string, minLength: 1}
+        to_version: {type: string, minLength: 1}
+      additionalProperties: false
+    output_schema_ref: ../contracts/rest-openapi.yaml#/components/schemas/UpgradePathResolution
+    bounds:
+      max_response_bytes: 8192
+
+  - name: list_firmware_targets
+    description: |
+      List firmware targets, optionally filtered by platform_family or
+      vendor_normalized. Bounded response: at most MCP_LIST_MAX_RETURN
+      (500 in v1) items per call; callers paginate via next_page_token.
+      Required permission: READ_FIRMWARE_CATALOG.
+    read_only: true
+    input_schema:
+      type: object
+      properties:
+        platform_family: {type: string, nullable: true}
+        vendor_normalized: {type: string, nullable: true}
+        limit: {type: integer, minimum: 1, maximum: 500, default: 50}
+        page_token: {type: string, nullable: true}
+      additionalProperties: false
+    output_schema_ref: ../contracts/rest-openapi.yaml#/components/schemas/FirmwareTargetList
+    bounds:
+      max_response_items: 500
+
+  - name: list_firmware_packages
+    description: |
+      List firmware packages (metadata only; blobs are not returned via
+      MCP). Filterable by vendor, platform_family. Bounded as above.
+      Required permission: READ_FIRMWARE_CATALOG.
+    read_only: true
+    input_schema:
+      type: object
+      properties:
+        vendor: {type: string, nullable: true}
+        platform_family: {type: string, nullable: true}
+        limit: {type: integer, minimum: 1, maximum: 500, default: 50}
+        page_token: {type: string, nullable: true}
+      additionalProperties: false
+    output_schema_ref: ../contracts/rest-openapi.yaml#/components/schemas/FirmwarePackageList
+    bounds:
+      max_response_items: 500
+
+  - name: list_upgrade_paths
+    description: |
+      List declared upgrade edges (the raw graph data). Filterable by
+      platform_family. Use get_upgrade_path for traversal. Required
+      permission: READ_FIRMWARE_CATALOG.
+    read_only: true
+    input_schema:
+      type: object
+      properties:
+        platform_family: {type: string, nullable: true}
+        limit: {type: integer, minimum: 1, maximum: 500, default: 50}
+        page_token: {type: string, nullable: true}
+      additionalProperties: false
+    output_schema_ref: ../contracts/rest-openapi.yaml#/components/schemas/UpgradePathEdgeList
+    bounds:
+      max_response_items: 500
+
+# Tools the F2 MCP server explicitly does NOT expose. The disallowed
+# list is enforced by the server's tool registry (constitutional whitelist).
+disallowed_tools:
+  - name: execute_sql
+    reason: Constitution VI — MCP exposes curated tools, not raw infrastructure
+  - name: run_shell
+    reason: Constitution VI
+  - name: read_file
+    reason: Constitution VI
+  - name: write_file
+    reason: Constitution VI
+  - name: http_request
+    reason: Constitution VI
+  - name: propose_firmware_target_draft
+    reason: Deferred to F5 (uplift planning) per research.md R-7. Approval = merged PR in v1.

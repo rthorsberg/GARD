@@ -1,0 +1,12 @@
+catalog_schema_version: "1.0.0"
+vendor: cisco
+platform_family: iosxr
+version: "7.8.1"
+sha256: 3a56a0bc57cf63e44890abe9cb8edbb3d21bbef2744a4f7acb3ef2e9ad56f90b
+byte_size: 2818572288  # ~2.6 GiB
+signed_by: cisco
+release_date: "2023-03-08"
+download_url: https://software.cisco.com/download/home/iosxr/7.8.1
+notes: |
+  Placeholder SHA-256 (deterministic test value: sha256("gard-test-firmware-7.8.1")).
+  This is the package targeted by cisco-iosxr-edge.yaml.

@@ -1,0 +1,12 @@
+catalog_schema_version: "1.0.0"
+vendor: cisco
+platform_family: iosxr
+version: "7.5.2"
+sha256: e09b45525976ef296cabde03eb6e699af2d13d8e35c2e29cfa62a69d49fcc9fa
+byte_size: 2684354560  # ~2.5 GiB, realistic for an IOS XR image
+signed_by: cisco
+release_date: "2022-04-15"
+download_url: https://software.cisco.com/download/home/iosxr/7.5.2
+notes: |
+  Placeholder SHA-256 (deterministic test value: sha256("gard-test-firmware-7.5.2")).
+  No blob will be present until an operator uploads via POST .../blob.

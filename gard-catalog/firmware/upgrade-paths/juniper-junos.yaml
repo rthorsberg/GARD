@@ -1,0 +1,7 @@
+catalog_schema_version: "1.0.0"
+platform_family: junos
+edges:
+  - from_version: "22.4R3-S2"
+    to_version: "23.2R1"
+    weight: 1
+    notes: direct next-release hop

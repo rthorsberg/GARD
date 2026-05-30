@@ -1,4 +1,13 @@
-"""CSV row Pydantic models matching `contracts/csv-schema.yaml` (T070)."""
+"""CSV row Pydantic models matching `contracts/csv-schema.yaml` (T070).
+
+Schema versions accepted (additive bump in F2 per research.md D7):
+
+- ``1.0.0`` (F1) — devices.csv with no facts beyond observed_firmware /
+  observed_bootloader.
+- ``1.1.0`` (F2) — adds three optional columns: ``ram_mb`` (integer),
+  ``disk_mb`` (integer), ``licenses`` (semicolon-separated list). v1.0.0
+  CSVs continue to load with the three columns defaulting to None.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-CSV_SCHEMA_VERSION = "1.0.0"
+CSV_SCHEMA_VERSION = "1.1.0"
+SUPPORTED_CSV_SCHEMA_VERSIONS = ("1.0.0", "1.1.0")
 
 
 def _strip_or_none(v: str | None) -> str | None:
@@ -46,6 +56,11 @@ class CsvRow(BaseModel):
     observed_bootloader: str | None = None
     observed_at: dt.datetime | None = None
 
+    # ---- F2 (csv_schema_version 1.1.0) — all optional, never coerced ----
+    ram_mb: int | None = None
+    disk_mb: int | None = None
+    licenses: list[str] | None = None
+
     @field_validator(
         "serial_number",
         "platform_family_raw",
@@ -62,6 +77,42 @@ class CsvRow(BaseModel):
         if isinstance(v, str):
             return _strip_or_none(v)
         return v
+
+    @field_validator("ram_mb", "disk_mb", mode="before")
+    @classmethod
+    def _empty_to_none_int(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            return s
+        return v
+
+    @field_validator("licenses", mode="before")
+    @classmethod
+    def _parse_licenses(cls, v: Any) -> Any:
+        """F2 D7 / T024: parse semicolon-separated list, reject commas.
+
+        - Empty / whitespace-only → None (never coerced to []).
+        - Trim each element; skip empties.
+        - Comma-separated input → raise ValueError so the row surfaces as
+          ROW_VALIDATION with a clear "comma separator not allowed" message.
+        """
+        if v is None or isinstance(v, list):
+            return v
+        if not isinstance(v, str):
+            return v
+        s = v.strip()
+        if not s:
+            return None
+        if "," in s:
+            raise ValueError(
+                "licenses must use ';' as separator; commas are reserved "
+                "to avoid CSV-quoting ambiguity (research.md D7)"
+            )
+        parts = [p.strip() for p in s.split(";")]
+        out = [p for p in parts if p]
+        return out or None
 
 
 CSV_ERROR_CODES: dict[str, str] = {

@@ -1,0 +1,113 @@
+# JSON Schema 2020-12 for PrerequisiteRule catalog YAML files.
+# Lives at gard-catalog/firmware/prerequisites/*.yaml.
+# F2 stores and lists; F4 (readiness) evaluates.
+
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/firmware-prerequisite.schema.yaml
+title: PrerequisiteRule
+description: |
+  A condition that must hold on a device before a referenced upgrade
+  can proceed. Predicate kinds are an enumerated, declarative vocabulary;
+  evaluation lives in F4. The tagged_with predicate is loadable but
+  evaluable=false in v1 (deferred to F7 NetBox).
+type: object
+required: [catalog_schema_version, name, applies_to, predicate]
+properties:
+  catalog_schema_version:
+    type: string
+    pattern: "^1\\.0\\.0$"
+  name:
+    type: string
+    minLength: 1
+    maxLength: 200
+    description: Human-readable handle (UNIQUE per active row).
+  applies_to:
+    $ref: scope-selector.schema.yaml
+  predicate:
+    oneOf:
+      - type: object
+        required: [kind, min_mb]
+        properties:
+          kind: {const: min_ram_mb}
+          min_mb: {type: integer, minimum: 1}
+        additionalProperties: false
+      - type: object
+        required: [kind, min_mb]
+        properties:
+          kind: {const: min_disk_mb}
+          min_mb: {type: integer, minimum: 1}
+        additionalProperties: false
+      - type: object
+        required: [kind, min_version]
+        properties:
+          kind: {const: min_current_version}
+          min_version: {type: string, minLength: 1}
+        additionalProperties: false
+      - type: object
+        required: [kind, revisions]
+        properties:
+          kind: {const: hardware_revision_in}
+          revisions:
+            type: array
+            items: {type: string, minLength: 1}
+            minItems: 1
+            uniqueItems: true
+        additionalProperties: false
+      - type: object
+        required: [kind, license]
+        properties:
+          kind: {const: license_present}
+          license: {type: string, minLength: 1}
+        additionalProperties: false
+      - type: object
+        required: [kind, version]
+        properties:
+          kind: {const: intermediate_version_required}
+          version: {type: string, minLength: 1}
+        additionalProperties: false
+      - type: object
+        required: [kind, states]
+        properties:
+          kind: {const: not_in_state}
+          states:
+            type: array
+            items:
+              type: string
+              enum:
+                - imported
+                - classified
+                - target_defined
+                - compliant
+                - outside_target
+                - manual_review_required
+            minItems: 1
+            uniqueItems: true
+        additionalProperties: false
+      - type: object
+        required: [kind, regions]
+        properties:
+          kind: {const: region_in}
+          regions:
+            type: array
+            items: {type: string, minLength: 1}
+            minItems: 1
+            uniqueItems: true
+        additionalProperties: false
+      - type: object
+        required: [kind, tags]
+        properties:
+          kind: {const: tagged_with}
+          tags:
+            type: array
+            items: {type: string, minLength: 1}
+            minItems: 1
+            uniqueItems: true
+        additionalProperties: false
+  severity:
+    type: string
+    enum: [required, recommended]
+    default: required
+    description: |
+      F4 will order blocker reasons by severity. required blockers fail
+      readiness; recommended ones surface but don't block.
+additionalProperties: false

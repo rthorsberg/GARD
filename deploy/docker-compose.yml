@@ -45,6 +45,8 @@ services:
       GARD_REQUIRE_TLS: "false"
       GARD_JWT_SECRET: dev-secret-change-me
       GARD_LOG_LEVEL: DEBUG
+      GARD_BLOB_ROOT: /var/lib/gard/blobs
+      GARD_FIRMWARE_BLOB_MAX_BYTES: "5368709120"
     ports:
       - "${GARD_API_HOST_PORT:-8080}:8000"
     command: ["serve"]
@@ -54,6 +56,9 @@ services:
       timeout: 3s
       retries: 6
       start_period: 5s
+    volumes:
+      - gard-blobs:/var/lib/gard/blobs
 
 volumes:
   gard-pg: {}
+  gard-blobs: {}

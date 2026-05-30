@@ -24,6 +24,7 @@ dependencies = [
     "pyyaml>=6.0,<7",
     "jsonschema>=4.22,<5",
     "python-multipart>=0.0.9,<1",
+    "networkx>=3.2,<4",
 ]
 
 [project.optional-dependencies]
@@ -76,6 +77,16 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106", "S311", "PT011"]
 "gard/db/migrations/**/*.py" = ["N999", "E402"]
+# Blob-store leaf exceptions intentionally omit the "Error" suffix —
+# they're domain terms (BlobChecksumMismatch, BlobTooLarge, etc.) and
+# BlobStoreError is the canonical Error-suffixed base class.
+"gard/core/blob_store/__init__.py" = ["N818"]
+# Same convention for selector grammar (UnknownSelectorKey).
+"gard/core/scope_selector.py" = ["N818"]
+# Controller shells out to `git` with a static argv to capture per-file
+# SHAs. S603/S607 are intentional here — git is PATH-resolved by design
+# (matches the operator's env) and the argv is a literal, not interpolated.
+"gard/core/firmware_catalog_controller.py" = ["S603", "S607"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -89,7 +100,7 @@ warn_redundant_casts = true
 plugins = []
 
 [[tool.mypy.overrides]]
-module = ["jose.*", "authlib.*", "uuid_extensions.*", "mcp.*"]
+module = ["jose.*", "authlib.*", "uuid_extensions.*", "mcp.*", "networkx.*", "jsonschema.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

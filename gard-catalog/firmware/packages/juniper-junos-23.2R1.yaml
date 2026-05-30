@@ -1,0 +1,11 @@
+catalog_schema_version: "1.0.0"
+vendor: juniper
+platform_family: junos
+version: "23.2R1"
+sha256: 5fc7fb60db8af5234374a796f67d65fde14bfc199c2f1723995ff11f19155022
+byte_size: 1717986918  # ~1.6 GiB
+signed_by: juniper
+release_date: "2023-08-04"
+download_url: https://support.juniper.net/support/downloads/?p=junos&v=23.2R1
+notes: |
+  Placeholder SHA-256 (deterministic test value). Targeted by juniper-junos-core.yaml.

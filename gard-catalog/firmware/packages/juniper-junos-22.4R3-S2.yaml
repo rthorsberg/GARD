@@ -1,0 +1,11 @@
+catalog_schema_version: "1.0.0"
+vendor: juniper
+platform_family: junos
+version: "22.4R3-S2"
+sha256: 5d377a0604271ec3c976b3d42bfffbacc5eea315182d6d1a790728c9bcd88228
+byte_size: 1610612736  # ~1.5 GiB
+signed_by: juniper
+release_date: "2023-09-29"
+download_url: https://support.juniper.net/support/downloads/?p=junos&v=22.4R3-S2
+notes: |
+  Placeholder SHA-256 (deterministic test value).
