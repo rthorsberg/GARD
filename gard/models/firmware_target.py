@@ -30,9 +30,7 @@ class FirmwareTarget(Base):
     loaded_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, server_default=func.now()
     )
-    removed_at: Mapped[dt.datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    removed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     source_file_relpath: Mapped[str] = mapped_column(String, nullable=False)
     catalog_schema_version: Mapped[str] = mapped_column(String(16), nullable=False)
 

@@ -132,7 +132,6 @@ def chain(
         hop_count=result.hops,
         total_weight=result.total_weight,
         reasons=[
-            UpgradePathChainReason(kind=r["kind"], detail=r.get("detail"))
-            for r in result.reasons
+            UpgradePathChainReason(kind=r["kind"], detail=r.get("detail")) for r in result.reasons
         ],
     )

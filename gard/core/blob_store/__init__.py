@@ -48,6 +48,7 @@ __all__ = [
 
 # ---- Errors -----------------------------------------------------------
 
+
 class BlobStoreError(Exception):
     """Base for all BlobStore-raised errors."""
 
@@ -78,6 +79,7 @@ class BlobNotPresent(BlobStoreError):
 
 
 # ---- Value types ------------------------------------------------------
+
 
 @dataclass(frozen=True, slots=True)
 class WriteReceipt:
@@ -147,6 +149,7 @@ class StreamWithVerify:
 
 # ---- Helpers ----------------------------------------------------------
 
+
 def key_for_sha256(sha256: str) -> str:
     """Compute the content-addressed key for a hex SHA-256.
 
@@ -161,6 +164,7 @@ def key_for_sha256(sha256: str) -> str:
 
 
 # ---- Protocol ---------------------------------------------------------
+
 
 @runtime_checkable
 class BlobStore(Protocol):

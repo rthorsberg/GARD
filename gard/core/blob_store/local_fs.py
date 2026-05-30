@@ -109,9 +109,7 @@ class LocalFsBlobStore(BlobStore):
             try:
                 fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
-                raise BlobUploadInProgress(
-                    f"another writer is uploading key={key}"
-                ) from exc
+                raise BlobUploadInProgress(f"another writer is uploading key={key}") from exc
 
             temp_path = self._temp_path(target)
             hasher = hashlib.sha256()

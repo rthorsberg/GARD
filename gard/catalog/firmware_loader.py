@@ -184,9 +184,7 @@ def _load_yaml(path: Path, relpath: str) -> dict[str, Any]:
             file_relpath=relpath, reason=f"yaml parse error: {exc}"
         ) from exc
     if not isinstance(doc, dict):
-        raise FirmwareCatalogLoadError(
-            file_relpath=relpath, reason="root must be a mapping"
-        )
+        raise FirmwareCatalogLoadError(file_relpath=relpath, reason="root must be a mapping")
     if doc.get("catalog_schema_version") != CATALOG_SCHEMA_VERSION:
         raise FirmwareCatalogLoadError(
             file_relpath=relpath,
@@ -224,9 +222,7 @@ def _load_targets(session: Session, root: Path, report: LoadReport) -> None:
         try:
             validate_keys(doc["scope_selector"])
         except UnknownSelectorKey as exc:
-            raise FirmwareCatalogLoadError(
-                file_relpath=relpath, reason=str(exc)
-            ) from exc
+            raise FirmwareCatalogLoadError(file_relpath=relpath, reason=str(exc)) from exc
 
         name = doc["name"]
         if name in loaded_keys:
@@ -238,9 +234,7 @@ def _load_targets(session: Session, root: Path, report: LoadReport) -> None:
         valid_from = _parse_iso_date(doc.get("valid_from"), relpath, "valid_from")
         valid_until = _parse_iso_date(doc.get("valid_until"), relpath, "valid_until")
 
-        existing = session.scalar(
-            select(FirmwareTarget).where(FirmwareTarget.name == name)
-        )
+        existing = session.scalar(select(FirmwareTarget).where(FirmwareTarget.name == name))
         after_payload = {
             "name": name,
             "platform_family": doc["platform_family"],
@@ -304,9 +298,7 @@ def _load_targets(session: Session, root: Path, report: LoadReport) -> None:
 
     # Soft-delete every target whose source_file_relpath is no longer on disk
     seen_relpaths = {rp for _, rp in files}
-    stale = session.scalars(
-        select(FirmwareTarget).where(FirmwareTarget.removed_at.is_(None))
-    ).all()
+    stale = session.scalars(select(FirmwareTarget).where(FirmwareTarget.removed_at.is_(None))).all()
     for row in stale:
         if row.source_file_relpath in seen_relpaths:
             continue
@@ -491,9 +483,7 @@ def _load_upgrade_paths(session: Session, root: Path, report: LoadReport) -> Non
             if prior is not None:
                 raise FirmwareCatalogLoadError(
                     file_relpath=relpath,
-                    reason=(
-                        f"edge {ek!r} also declared in {prior!r}; refusing duplicate"
-                    ),
+                    reason=(f"edge {ek!r} also declared in {prior!r}; refusing duplicate"),
                 )
             seen_edges[ek] = relpath
 
@@ -599,9 +589,7 @@ def _load_prerequisites(session: Session, root: Path, report: LoadReport) -> Non
         try:
             validate_keys(doc["applies_to"])
         except UnknownSelectorKey as exc:
-            raise FirmwareCatalogLoadError(
-                file_relpath=relpath, reason=str(exc)
-            ) from exc
+            raise FirmwareCatalogLoadError(file_relpath=relpath, reason=str(exc)) from exc
 
         name = doc["name"]
         if name in loaded_keys:
@@ -679,9 +667,7 @@ def _load_prerequisites(session: Session, root: Path, report: LoadReport) -> Non
 
     seen_relpaths = {rp for _, rp in files}
     stale = session.scalars(
-        select(FirmwarePrerequisiteRule).where(
-            FirmwarePrerequisiteRule.removed_at.is_(None)
-        )
+        select(FirmwarePrerequisiteRule).where(FirmwarePrerequisiteRule.removed_at.is_(None))
     ).all()
     for row in stale:
         if row.source_file_relpath in seen_relpaths:

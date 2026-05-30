@@ -128,10 +128,7 @@ def _summarize(
             f"{target.target_version!r} (target {target.name!r})"
         )
     if state == "unknown" and target is not None:
-        return (
-            f"{label}: target {target.name!r} applies but no observed firmware "
-            f"is on file yet"
-        )
+        return f"{label}: target {target.name!r} applies but no observed firmware is on file yet"
     if state == "classified":
         # F2 collapses "no target matched" + "empty catalog" + "device not
         # yet classified" into the F1 baseline state.
@@ -302,8 +299,7 @@ def evaluate(
                 kind="target_runner_up",
                 ref=str(ru.target.id),
                 detail=(
-                    f"runner-up {ru.target.name!r} also matched "
-                    f"(specificity={ru.specificity})"
+                    f"runner-up {ru.target.name!r} also matched (specificity={ru.specificity})"
                 ),
             )
         )
@@ -333,8 +329,7 @@ def evaluate(
             FirmwareComplianceReason(
                 kind="version_mismatch",
                 detail=(
-                    f"observed_firmware={observed!r} != "
-                    f"target_version={target.target_version!r}"
+                    f"observed_firmware={observed!r} != target_version={target.target_version!r}"
                 ),
             )
         )

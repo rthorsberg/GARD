@@ -82,9 +82,7 @@ class UpgradePathGraphCache:
         else:
             self._graphs.pop(platform_family, None)
 
-    def rebuild(
-        self, platform_family: str, edges: Iterable[EdgeSpec]
-    ) -> nx.DiGraph:
+    def rebuild(self, platform_family: str, edges: Iterable[EdgeSpec]) -> nx.DiGraph:
         """Replace the cached graph for ``platform_family``."""
         g = nx.DiGraph()
         for e in edges:

@@ -72,9 +72,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             settings = get_settings()
             norm_root = Path(args.root) if args.root else settings.catalog_root
             fw_root = (
-                Path(args.firmware_root)
-                if args.firmware_root
-                else settings.firmware_catalog_root
+                Path(args.firmware_root) if args.firmware_root else settings.firmware_catalog_root
             )
             only = args.only
 

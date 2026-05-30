@@ -83,8 +83,7 @@ def validate_keys(selector: Mapping[str, Any]) -> None:
     unknown = set(selector.keys()) - KNOWN_KEYS
     if unknown:
         raise UnknownSelectorKey(
-            f"unknown scope-selector keys: {sorted(unknown)} "
-            f"(allowed: {sorted(KNOWN_KEYS)})"
+            f"unknown scope-selector keys: {sorted(unknown)} (allowed: {sorted(KNOWN_KEYS)})"
         )
 
 

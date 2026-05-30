@@ -156,9 +156,7 @@ def _is_worktree_dirty(repo_root: Path) -> bool:
         return False
 
 
-def _capture_git_shas(
-    repo_root: Path, file_relpaths: set[str]
-) -> dict[str, str | None]:
+def _capture_git_shas(repo_root: Path, file_relpaths: set[str]) -> dict[str, str | None]:
     """Return a {relpath: sha-or-None} map for every loaded file."""
     return {rp: _git_file_sha(repo_root, rp) for rp in file_relpaths}
 
@@ -178,9 +176,7 @@ def _apply_git_shas(
         if not affected_ids:
             continue
         # Query the rows so we can apply per-relpath SHA correctly.
-        rows = session.scalars(
-            select(orm_cls).where(orm_cls.id.in_(affected_ids))
-        ).all()
+        rows = session.scalars(select(orm_cls).where(orm_cls.id.in_(affected_ids))).all()
         for row in rows:
             sha = sha_map.get(row.source_file_relpath)
             row.loaded_from_git_sha = sha
@@ -241,8 +237,7 @@ def _emit_catalog_load_evidence(
     from gard.core.evidence import emit as evidence_emit
 
     sorted_pairs = sorted(
-        (relpath, sha_map.get(relpath) or "DIRTY")
-        for relpath in report.file_relpaths_seen
+        (relpath, sha_map.get(relpath) or "DIRTY") for relpath in report.file_relpaths_seen
     )
     fingerprint_input = "\n".join(f"{r}:{s}" for r, s in sorted_pairs).encode("utf-8")
     fingerprint = hashlib.sha256(fingerprint_input).hexdigest()
@@ -264,8 +259,7 @@ def _emit_catalog_load_evidence(
         source_checksum=fingerprint,
         references={
             "files": [
-                {"relpath": r, "git_sha": s if s != "DIRTY" else None}
-                for r, s in sorted_pairs
+                {"relpath": r, "git_sha": s if s != "DIRTY" else None} for r, s in sorted_pairs
             ],
         },
     )
@@ -462,9 +456,7 @@ def _reevaluate_compliance_post_reload(
         LifecycleState.unknown,
     )
     set1: set[Any] = set(
-        session.scalars(
-            select(Device.id).where(Device.lifecycle_state.in_(firmware_states))
-        )
+        session.scalars(select(Device.id).where(Device.lifecycle_state.in_(firmware_states)))
     )
 
     # Set 2: devices whose facts match any touched target's scope.
@@ -476,9 +468,7 @@ def _reevaluate_compliance_post_reload(
         from gard.core.scope_selector import evaluate as evaluate_selector
 
         touched_targets = list(
-            session.scalars(
-                select(FirmwareTarget).where(FirmwareTarget.id.in_(touched_target_ids))
-            )
+            session.scalars(select(FirmwareTarget).where(FirmwareTarget.id.in_(touched_target_ids)))
         )
         devices = list(session.scalars(select(Device)))
         for device in devices:

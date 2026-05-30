@@ -324,8 +324,7 @@ def download_blob(
             detail={
                 "code": "BLOB_NOT_PRESENT",
                 "message": (
-                    f"package {pkg.id} has no uploaded blob; "
-                    "POST .../blob first to provision bytes"
+                    f"package {pkg.id} has no uploaded blob; POST .../blob first to provision bytes"
                 ),
             },
         )
@@ -398,7 +397,7 @@ def download_blob(
         "X-GARD-SHA256": pkg.sha256,
         "Content-Length": str(pkg.byte_size),
         "Content-Disposition": (
-            f"attachment; filename=\"{pkg.vendor}-{pkg.platform_family}-{pkg.version}.bin\""
+            f'attachment; filename="{pkg.vendor}-{pkg.platform_family}-{pkg.version}.bin"'
         ),
     }
     # Best-effort audit row for a successful download initiation. Mid-
