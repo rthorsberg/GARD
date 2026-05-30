@@ -177,6 +177,45 @@ print(f'{state:<14} target_ver={tv:<12} observed={ov}')")
   printf '    %-14s %s\n' "$HOST" "$STATE"
 done <<< "$DEVICE_IDS"
 
+bold "==> F3: triggering bounded compliance re-eval (scope=all)"
+EVAL_RES=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"scope_selector":{}}' \
+  "$API_BASE/api/v1/compliance/evaluate")
+echo "$EVAL_RES" | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    requested={r[\"requested_count\"]} evaluated={r[\"evaluated_count\"]} unchanged={r[\"unchanged_count\"]}')
+print(f'    correlation_id={r[\"correlation_id\"]}')
+" 2>/dev/null || dim "    (skipped: evaluate endpoint not reachable)"
+
+bold "==> F3: estate-wide drift summary"
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/compliance/summary" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    total_evaluated={r[\"total_evaluated\"]} compliant={r[\"compliant_count\"]} unknown={r[\"unknown_count\"]}')
+counts = r['counts_by_drift_type']
+ordered = ['catalog_drift', 'rule_drift', 'package_drift', 'target_drift', 'discovery_drift', 'evidence_drift', 'exception_drift']
+for k in ordered:
+    v = counts.get(k, 0)
+    if v:
+        print(f'      - {k:<18} {v}')
+" 2>/dev/null || dim "    (skipped: summary endpoint not reachable)"
+
+bold "==> F3: per-device drift classification"
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/compliance/devices?limit=200" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+for it in r['items']:
+    env = it['envelope']
+    drift = env['drift_type'] or '-'
+    secondary = ','.join(env['secondary_drift_types']) or '-'
+    actions = ','.join(a['kind'] for a in env['recommended_actions']) or '-'
+    print(f'    {it[\"hostname\"]:<14} state={env[\"state\"]:<14} drift={drift:<16} secondary={secondary:<14} actions={actions}')
+" 2>/dev/null || dim "    (skipped: devices listing endpoint not reachable)"
+
 bold "==> Done."
 echo
 echo "Token (also at .gard/token.jwt):"

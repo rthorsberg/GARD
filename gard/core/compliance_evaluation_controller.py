@@ -351,10 +351,19 @@ def evaluate(
     # We append F3's drift reasons and overlay the typed actions.
 
     base_reasons: list[ComplianceReason] = []
+    seen_signatures: set[tuple[str, str | None, str | None]] = set()
+
+    def _push(r: ComplianceReason) -> None:
+        sig = (r.kind, r.ref_id, r.detail)
+        if sig in seen_signatures:
+            return
+        seen_signatures.add(sig)
+        base_reasons.append(r)
+
     for r in f2_envelope.reasons:
         # F2's FirmwareComplianceReason has fields kind/ref/detail —
         # F3's ComplianceReason carries kind/ref_id/ref_type/detail.
-        base_reasons.append(
+        _push(
             ComplianceReason(
                 kind=r.kind,
                 ref_id=r.ref,
@@ -362,8 +371,10 @@ def evaluate(
                 detail=r.detail,
             )
         )
+    # The drift rules may emit reasons that duplicate the F2 ones (notably
+    # version_mismatch). Dedupe on (kind, ref_id, detail).
     for _, dr_reason in drift_reasons:
-        base_reasons.append(dr_reason)
+        _push(dr_reason)
 
     actions = recommended_actions.build_actions_for(
         device=device,
@@ -371,19 +382,15 @@ def evaluate(
         drifts=drift_set,
     )
 
-    # Biconditional: state == compliant <=> no primary drift
-    # F2 owns the state value; we trust it. If F2 says compliant and we
-    # found discovery/evidence drift, the DB CHECK in 0007 would reject
-    # the row. Suppress secondary-only "compliant + discovery_drift"
-    # cases by keeping primary=None when state is compliant per ADR-0014.
+    # Compliant devices may still carry soft-drift signals
+    # (evidence_drift / discovery_drift) — these don't disqualify the
+    # compliance verdict but flag the row for follow-up. Upstream drift
+    # types on a compliant device would be an internal inconsistency:
+    # we drop them defensively here, the DB constraint enforces it.
+    soft_drift: set[DriftType] = {"evidence_drift", "discovery_drift"}
     if f2_envelope.state == "compliant":
-        # Compliant devices may still surface secondary drift kinds via
-        # the envelope, but the *primary_drift_type* DB column must be
-        # null to satisfy the biconditional CHECK. We split the
-        # in-memory secondary list off; persistence drops it on
-        # compliant.
-        persisted_primary: DriftType | None = None
-        persisted_secondary: list[DriftType] = []
+        persisted_primary: DriftType | None = primary if primary in soft_drift else None
+        persisted_secondary: list[DriftType] = [d for d in secondary if d in soft_drift]
     else:
         persisted_primary = primary
         persisted_secondary = secondary

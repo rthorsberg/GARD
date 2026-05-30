@@ -123,8 +123,17 @@ Complexity Tracking section and be approved before implementation.
   upload/download with verified SHA-256 round-trip, Merkle-style
   chain-of-custody evidence per reload. MCP tools for F2 deferred to
   follow-up feature `003-mcp-firmware-tools` (ADR-0013).
-- ⏭️ **Next**: F3 — Compliance & Drift Evaluation (drift taxonomy,
-  explainable response envelope, readiness signal).
+- ✅ **F3 — Compliance & Drift Evaluation** shipped on
+  `003-compliance-drift-evaluation` (PR #3). 7-type drift taxonomy
+  (catalog / rule / package / target / discovery / evidence /
+  exception) with explicit precedence ordering (ADR-0014),
+  append-only `compliance_evaluations` storage with idempotent
+  evaluator, typed `RecommendedAction` vocabulary, four REST
+  endpoints (`/compliance/summary`, `/compliance/devices`,
+  `/devices/{id}/compliance`, `/compliance/evaluate`), four MCP
+  tool delegates (transport still deferred), and a reload-sync hook
+  that piggybacks on F2's bounded re-eval.
+- ⏭️ **Next**: F4 — Readiness Signal & Upgrade Plan.
 
 ## Quickstart
 
@@ -153,11 +162,30 @@ After `make seed` you should see:
     r3.oslo       classified     target_ver=-          observed=23.10.R3
     r2.oslo       outside_target target_ver=23.2R1     observed=22.4R3-S2
     r1.oslo       outside_target target_ver=7.8.1      observed=7.5.2
+
+==> F3: estate-wide drift summary
+    total_evaluated=5 compliant=2 unknown=0
+      - catalog_drift      1
+      - package_drift      2
+      - evidence_drift     2
+
+==> F3: per-device drift classification
+    r1.oslo   state=outside_target drift=package_drift  secondary=target_drift  actions=upgrade_path_query,upload_firmware_package
+    r2.oslo   state=outside_target drift=package_drift  secondary=target_drift  actions=upgrade_path_query,upload_firmware_package
+    r4.bergen state=compliant      drift=evidence_drift secondary=-             actions=request_observation_refresh
+    r5.bergen state=compliant      drift=evidence_drift secondary=-             actions=request_observation_refresh
+    r3.oslo   state=classified     drift=catalog_drift  secondary=-             actions=define_target
 ```
 
-The `r3.oslo` device shows `classified` (no firmware target matches
-its Nokia SR-OS platform) by design — operators get to observe the
-`no_target_matched` reason in the compliance envelope.
+The `r3.oslo` device shows `classified` + `catalog_drift` (no firmware
+target matches its Nokia SR-OS platform) by design — operators get
+to observe the `no_target_matched` reason in the compliance envelope
+and a `define_target` recommended action.
+
+The seed runs against 5 devices, but the same endpoints scale to
+thousands; the summary endpoint is a single DISTINCT-ON aggregate
+that returns in well under a second on the 5,000-device synthetic
+target (see `specs/003-compliance-drift-evaluation/plan.md`).
 
 Other useful targets:
 

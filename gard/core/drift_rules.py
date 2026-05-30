@@ -82,18 +82,36 @@ def sort_by_precedence(drifts: Iterable[DriftType]) -> list[DriftType]:
 
 
 def is_target_drift(env: FirmwareComplianceEnvelope) -> ComplianceReason | None:
-    """A target is resolved and the observed firmware != target_version."""
-    if env.state == "outside_target":
-        return ComplianceReason(
-            kind="version_mismatch",
-            ref_type="FirmwareTarget",
-            ref_id=env.target_ref,
-            detail=(
-                f"observed_version={env.observed_version!r} != "
-                f"target_version={env.target_version!r}"
-            ),
-        )
-    return None
+    """A target is resolved and the observed firmware != target_version.
+
+    Returns ``None`` for the reason payload even when the rule fires —
+    F2's envelope already carries the ``version_mismatch`` reason that
+    fully explains this drift type. We avoid the duplicate by
+    surfacing only the *drift type* (``target_drift``) and leaving the
+    reason narration to F2.
+
+    Callers detect "rule fired" by the device's ``compliance_state``
+    being ``outside_target`` plus this function returning a sentinel
+    truthy non-None — see :func:`target_drift_fired` for the boolean
+    primitive.
+    """
+    if env.state != "outside_target":
+        return None
+    # Sentinel reason that the controller's dedupe will collapse against
+    # the F2 version_mismatch — same kind + ref_id + detail wording.
+    f2_reason_detail = (
+        f"observed_firmware={env.observed_version!r} != target_version={env.target_version!r}"
+    )
+    return ComplianceReason(
+        kind="version_mismatch",
+        detail=f2_reason_detail,
+    )
+
+
+def target_drift_fired(env: FirmwareComplianceEnvelope) -> bool:
+    """Did target_drift fire? Used by the controller to keep the
+    drift-type set independent of the optional reason payload."""
+    return env.state == "outside_target"
 
 
 def is_catalog_drift(env: FirmwareComplianceEnvelope) -> ComplianceReason | None:

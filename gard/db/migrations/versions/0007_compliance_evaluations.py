@@ -136,11 +136,17 @@ def upgrade() -> None:
             name="ck_compliance_eval_primary_drift",
         ),
         sa.CheckConstraint(
-            # Compliant <=> no primary drift. The biconditional is the F3
-            # invariant: if you're compliant, there is no drift type to
-            # surface; if there's a drift type, you are NOT compliant.
-            "(primary_drift_type IS NULL) = (compliance_state = 'compliant')",
-            name="ck_compliance_eval_compliant_iff_no_drift",
+            # Compliant devices may carry an `evidence_drift` or
+            # `discovery_drift` primary — these are soft-drift signals
+            # that don't disqualify the compliance verdict (see
+            # data-model.md §3 transition matrix). Any *upstream* drift
+            # type (catalog/rule/package/target) on a compliant row would
+            # be inconsistent; we reject those at the controller layer
+            # rather than push it into the schema, so the constraint
+            # below is narrow: a non-compliant row MUST carry a primary
+            # drift, but compliant rows MAY carry one of the soft types.
+            "(compliance_state = 'compliant') OR (primary_drift_type IS NOT NULL)",
+            name="ck_compliance_eval_non_compliant_has_drift",
         ),
         sa.CheckConstraint(
             "confidence >= 0.0 AND confidence <= 1.0",

@@ -24,7 +24,6 @@ import yaml
 
 from gard.core.rbac import Permission, all_permissions
 
-
 CONTRACT = (
     Path(__file__).resolve().parents[2]
     / "specs"
@@ -76,6 +75,4 @@ def test_delegate_module_exists(tool: dict) -> None:
     assert hasattr(mod, "REQUIRED_PERMISSION"), (
         f"{tool['name']} delegate must declare REQUIRED_PERMISSION"
     )
-    assert callable(getattr(mod, "invoke", None)), (
-        f"{tool['name']} delegate must expose invoke()"
-    )
+    assert callable(getattr(mod, "invoke", None)), f"{tool['name']} delegate must expose invoke()"
