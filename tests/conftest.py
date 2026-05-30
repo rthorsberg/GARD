@@ -76,6 +76,7 @@ def engine(_migrated_db: str) -> Iterator[Engine]:
 
 
 _DATA_TABLES = (
+    "compliance_evaluations",
     "manual_mappings",
     "device_observations",
     "import_jobs",
@@ -84,6 +85,10 @@ _DATA_TABLES = (
     "lifecycle_evidence",
     "api_tokens",
     "normalization_rules",
+    "firmware_prerequisite_rules",
+    "firmware_upgrade_paths",
+    "firmware_packages",
+    "firmware_targets",
     "devices",
 )
 
