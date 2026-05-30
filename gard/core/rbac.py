@@ -42,6 +42,14 @@ class Permission:
     READ_FIRMWARE_CATALOG = "firmware_catalog.read"
     MANAGE_FIRMWARE_BLOB = "firmware_catalog.blob.manage"
 
+    # ---- F3: compliance & drift evaluation -------------------------------
+    # READ_COMPLIANCE gates the three GET endpoints under /api/v1/compliance
+    # and /devices/{id}/compliance. RUN_COMPLIANCE_EVAL gates the bounded
+    # POST /compliance/evaluate trigger — admin-grade because an unbounded
+    # call could pin Postgres for the duration of the batch.
+    READ_COMPLIANCE = "compliance.read"
+    RUN_COMPLIANCE_EVAL = "compliance.evaluate"
+
 
 # fmt: off
 _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
@@ -53,6 +61,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_EVIDENCE,
         Permission.READ_RULE,
         Permission.READ_FIRMWARE_CATALOG,
+        Permission.READ_COMPLIANCE,
     }),
     Role.lifecycle_manager: frozenset({
         Permission.READ_DEVICE,
@@ -67,6 +76,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.CREATE_MANUAL_MAPPING,
         Permission.READ_FIRMWARE_CATALOG,
         Permission.MANAGE_FIRMWARE_BLOB,
+        Permission.READ_COMPLIANCE,
+        Permission.RUN_COMPLIANCE_EVAL,
     }),
     Role.mcp_client: frozenset({
         Permission.READ_DEVICE,
@@ -75,6 +86,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_RULE,
         Permission.INVOKE_MCP_TOOL,
         Permission.READ_FIRMWARE_CATALOG,
+        Permission.READ_COMPLIANCE,
     }),
     Role.system_admin: frozenset({
         Permission.READ_DEVICE,
@@ -92,6 +104,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.MANAGE_MCP_TOOLS,
         Permission.READ_FIRMWARE_CATALOG,
         Permission.MANAGE_FIRMWARE_BLOB,
+        Permission.READ_COMPLIANCE,
+        Permission.RUN_COMPLIANCE_EVAL,
     }),
 }
 # fmt: on
