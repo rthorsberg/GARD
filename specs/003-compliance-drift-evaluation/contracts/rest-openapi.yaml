@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: GARD F3 — Compliance & Drift Evaluation API
+  version: "1.0.0"
+  description: |
+    Read-only operator surface for estate-wide drift triage and
+    explainable per-device verdicts. Plus one bounded trigger
+    endpoint for on-demand re-evaluation. Per ADR-0011 and
+    Constitution I, none of these endpoints mutate device state
+    or push to adapters.
+
+    All paths require JWT auth (F1 ADR-0008). RBAC permissions:
+      - READ_COMPLIANCE for the three GET endpoints
+      - RUN_COMPLIANCE_EVAL for POST /compliance/evaluate
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /api/v1/compliance/summary:
+    get:
+      tags: [compliance]
+      summary: Estate-wide drift summary, optionally filtered
+      description: |
+        Returns one count per drift type plus `compliant_count`,
+        `unknown_count`, and `total_evaluated`. Counts are derived
+        from the latest persisted ComplianceEvaluation per device.
+        The endpoint MUST NOT trigger evaluation on the hot path.
+      operationId: getComplianceSummary
+      parameters:
+        - {in: query, name: region,              schema: {type: string}, required: false}
+        - {in: query, name: site,                schema: {type: string}, required: false}
+        - {in: query, name: platform_family,     schema: {type: string}, required: false}
+        - {in: query, name: vendor_normalized,   schema: {type: string}, required: false}
+      responses:
+        "200":
+          description: Drift summary
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SummaryResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /api/v1/compliance/devices:
+    get:
+      tags: [compliance]
+      summary: Paginated list of devices with their latest compliance envelope
+      operationId: listComplianceDevices
+      parameters:
+        - {in: query, name: drift_type,
+           schema: {$ref: "#/components/schemas/DriftType"}, required: false}
+        - {in: query, name: state,
+           schema: {$ref: "#/components/schemas/ComplianceState"}, required: false}
+        - {in: query, name: region,              schema: {type: string}, required: false}
+        - {in: query, name: site,                schema: {type: string}, required: false}
+        - {in: query, name: platform_family,     schema: {type: string}, required: false}
+        - {in: query, name: vendor_normalized,   schema: {type: string}, required: false}
+        - {in: query, name: limit,
+           schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
+        - {in: query, name: page_token,          schema: {type: string}, required: false}
+      responses:
+        "200":
+          description: Page of device-with-envelope rows
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ComplianceDeviceList"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /api/v1/devices/{device_id}/compliance:
+    get:
+      tags: [compliance]
+      summary: Full explainable compliance envelope for one device
+      operationId: getDeviceCompliance
+      parameters:
+        - {in: path, name: device_id,
+           required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Compliance envelope
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ComplianceEnvelope"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /api/v1/compliance/evaluate:
+    post:
+      tags: [compliance]
+      summary: Trigger re-evaluation for an explicit device set
+      description: |
+        Bounded by configured cap (default 5,000 devices). Refuses
+        larger sets with 413. The request body MUST contain
+        EXACTLY ONE of `device_ids` or `scope_selector`.
+      operationId: triggerComplianceEvaluate
+      security:
+        - bearerAuth: [RUN_COMPLIANCE_EVAL]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/EvaluateRequest"}
+      responses:
+        "200":
+          description: Evaluation completed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EvaluateResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "413":
+          description: EVALUATION_TOO_LARGE - resolved set exceeds cap
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope"}
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized: {description: invalid or missing token,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    Forbidden:    {description: token lacks required permission,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    NotFound:     {description: resource not found,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    BadRequest:   {description: invalid request body or query,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+
+  schemas:
+
+    DriftType:
+      type: string
+      enum: [target_drift, catalog_drift, package_drift, rule_drift,
+             evidence_drift, discovery_drift, exception_drift]
+
+    ComplianceState:
+      type: string
+      enum: [classified, target_defined, compliant, outside_target, unknown]
+
+    ReasonKind:
+      type: string
+      enum: [target_matched, target_runner_up, version_match,
+             version_mismatch, missing_observation, no_target_matched,
+             empty_catalog, predicate_deferred, stale_observation,
+             missing_upgrade_path, package_not_built]
+
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:   {$ref: "#/components/schemas/ReasonKind"}
+        ref:    {type: [string, "null"], description: "stable id of cited artefact"}
+        detail: {type: [string, "null"]}
+
+    RecommendedActionKind:
+      type: string
+      enum: [upgrade_path_query, define_target, define_upgrade_path,
+             upload_firmware_package, trigger_discovery,
+             request_observation_refresh, escalate_to_catalog_owner,
+             acknowledge_exception]
+
+    RecommendedAction:
+      type: object
+      additionalProperties: false
+      required: [kind, params]
+      properties:
+        kind:   {$ref: "#/components/schemas/RecommendedActionKind"}
+        ref:    {type: [string, "null"]}
+        params: {type: object, description: "typed per-kind"}
+
+    ComplianceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [state, summary, drift_type, secondary_drift_types,
+                 facts, reasons, recommended_actions, confidence,
+                 as_of, correlation_id]
+      properties:
+        state:                  {$ref: "#/components/schemas/ComplianceState"}
+        summary:                {type: string}
+        drift_type:             {type: [string, "null"],
+                                 description: "null iff compliant"}
+        secondary_drift_types:  {type: array,
+                                 items: {$ref: "#/components/schemas/DriftType"}}
+        target_ref:             {type: [string, "null"], format: uuid}
+        target_version:         {type: [string, "null"]}
+        observed_version:       {type: [string, "null"]}
+        observation_ref:        {type: [string, "null"], format: uuid}
+        facts:                  {type: object}
+        reasons:                {type: array,
+                                 items: {$ref: "#/components/schemas/Reason"}}
+        recommended_actions:    {type: array,
+                                 items: {$ref: "#/components/schemas/RecommendedAction"}}
+        confidence:             {type: number, minimum: 0, maximum: 1}
+        as_of:                  {type: string, format: date-time}
+        correlation_id:         {type: string}
+
+    SummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [total_evaluated, compliant_count, unknown_count,
+                 counts_by_drift_type, filters_applied, as_of]
+      properties:
+        total_evaluated:        {type: integer, minimum: 0}
+        compliant_count:        {type: integer, minimum: 0}
+        unknown_count:          {type: integer, minimum: 0}
+        counts_by_drift_type:
+          type: object
+          additionalProperties: false
+          properties:
+            target_drift:       {type: integer, minimum: 0}
+            catalog_drift:      {type: integer, minimum: 0}
+            package_drift:      {type: integer, minimum: 0}
+            rule_drift:         {type: integer, minimum: 0}
+            evidence_drift:     {type: integer, minimum: 0}
+            discovery_drift:    {type: integer, minimum: 0}
+            exception_drift:    {type: integer, minimum: 0}
+        filters_applied:        {type: object}
+        as_of:                  {type: string, format: date-time}
+
+    ComplianceDeviceRow:
+      type: object
+      additionalProperties: false
+      required: [device_id, hostname, envelope]
+      properties:
+        device_id: {type: string, format: uuid}
+        hostname:  {type: string}
+        region:    {type: [string, "null"]}
+        site:      {type: [string, "null"]}
+        platform_family: {type: [string, "null"]}
+        envelope:  {$ref: "#/components/schemas/ComplianceEnvelope"}
+
+    ComplianceDeviceList:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, next_page_token]
+      properties:
+        items:           {type: array, items: {$ref: "#/components/schemas/ComplianceDeviceRow"}}
+        total_returned:  {type: integer, minimum: 0}
+        next_page_token: {type: [string, "null"]}
+
+    EvaluateRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [device_ids]
+        - required: [scope_selector]
+      properties:
+        device_ids:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items: {type: string, format: uuid}
+        scope_selector:
+          type: object
+          description: same selector grammar as FirmwareTarget.scope_selector
+
+    EvaluateResponse:
+      type: object
+      additionalProperties: false
+      required: [requested_count, evaluated_count, unchanged_count,
+                 correlation_id]
+      properties:
+        requested_count:  {type: integer, minimum: 0}
+        evaluated_count:  {type: integer, minimum: 0,
+                           description: devices that received a new evaluation row}
+        unchanged_count:  {type: integer, minimum: 0,
+                           description: devices that re-evaluated to same verdict (silent)}
+        correlation_id:   {type: string}
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:           {type: string}
+            message:        {type: string}
+            details:        {type: [object, "null"]}
+            correlation_id: {type: [string, "null"]}

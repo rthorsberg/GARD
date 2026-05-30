@@ -1,0 +1,150 @@
+# F3 MCP tool contracts (FR-025 / FR-026).
+#
+# These are the schemas the future MCP transport feature (008) will
+# register. F3 itself does NOT start an MCP server — per ADR-0013,
+# the transport is deferred. F3 ships:
+#   1. These schemas, exercised by contract tests
+#   2. Thin Python delegate implementations under gard/mcp/tools/
+#   3. Unit tests asserting each delegate returns data byte-identical
+#      to the REST equivalent (modulo correlation_id)
+#
+# When feature 008 lands, the delegates wire to the MCP server with
+# no per-tool code change.
+
+mcp_tools:
+
+  - name: count_devices_outside_target
+    description: |
+      Return the integer count of devices currently classified as
+      outside_target, optionally filtered by region/site/platform.
+      This is the operator's daily-standup question, surfaced as a
+      single-call tool for AI agents.
+    auth: READ_COMPLIANCE
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [count, as_of, correlation_id]
+      properties:
+        count:           {type: integer, minimum: 0}
+        as_of:           {type: string, format: date-time}
+        correlation_id:  {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/compliance/summary -> counts_by_drift_type.target_drift
+                     + summary.outside_target devices listing"
+      proof: tests/integration/test_us3_mcp_parity.py::test_count_parity
+
+  - name: list_devices_outside_target
+    description: |
+      Return up to 500 devices currently classified as outside_target,
+      with their hostname, region, observed_version, and target_version.
+      Bounded to keep the MCP envelope small.
+    auth: READ_COMPLIANCE
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, as_of, correlation_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [device_id, hostname, observed_version, target_version]
+            properties:
+              device_id:        {type: string, format: uuid}
+              hostname:         {type: string}
+              region:           {type: [string, "null"]}
+              site:             {type: [string, "null"]}
+              observed_version: {type: [string, "null"]}
+              target_version:   {type: [string, "null"]}
+              drift_type:       {type: string, enum: [target_drift]}
+        total_returned: {type: integer, minimum: 0}
+        as_of:          {type: string, format: date-time}
+        correlation_id: {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/compliance/devices?state=outside_target&drift_type=target_drift"
+      proof: tests/integration/test_us3_mcp_parity.py::test_list_parity
+
+  - name: get_compliance_summary
+    description: |
+      Return the same per-drift-type counts as the REST summary
+      endpoint, in the same envelope shape, for any filter set.
+    auth: READ_COMPLIANCE
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+    output_schema:
+      $ref: "./rest-openapi.yaml#/components/schemas/SummaryResponse"
+    rest_parity:
+      derived_from: "GET /api/v1/compliance/summary"
+      proof: tests/integration/test_us3_mcp_parity.py::test_summary_parity
+
+  - name: get_unknown_lifecycle_items
+    description: |
+      Return up to 500 devices currently in lifecycle_state=unknown,
+      with the reason their classification could not be resolved
+      (per Constitution III). Operators use this list as a manual-
+      review queue.
+    auth: READ_COMPLIANCE
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, as_of, correlation_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [device_id, hostname, reason_kind]
+            properties:
+              device_id:    {type: string, format: uuid}
+              hostname:     {type: string}
+              vendor_raw:   {type: [string, "null"]}
+              model_raw:    {type: [string, "null"]}
+              reason_kind:
+                type: string
+                enum: [missing_observation, no_target_matched,
+                       empty_catalog, predicate_deferred]
+              reason_detail: {type: [string, "null"]}
+        total_returned: {type: integer, minimum: 0}
+        as_of:          {type: string, format: date-time}
+        correlation_id: {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/compliance/devices?state=unknown"
+      proof: tests/integration/test_us3_mcp_parity.py::test_unknown_parity
