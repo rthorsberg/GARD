@@ -85,9 +85,7 @@ def _envelope_from_row(row: ReadinessEvaluation) -> ReadinessEnvelopeModel:
         upgrade_path_exists=row.upgrade_path_exists,
         applicable_rules_count=row.applicable_rules_count,
         blockers=[BlockerModel(**b) for b in (row.blockers or [])],
-        recommended_actions=[
-            RecommendedActionModel(**a) for a in (row.recommended_actions or [])
-        ],
+        recommended_actions=[RecommendedActionModel(**a) for a in (row.recommended_actions or [])],
         reasons=[ReasonModel(**r) for r in (row.reasons or [])],
         compliance_evaluation_ref=(
             str(row.compliance_evaluation_ref) if row.compliance_evaluation_ref else None
@@ -320,8 +318,7 @@ def get_device_readiness(
         applicable_rules_count=env.applicable_rules_count,
         blockers=[BlockerModel(**b.model_dump(mode="json")) for b in env.blockers],
         recommended_actions=[
-            RecommendedActionModel(**a.model_dump(mode="json"))
-            for a in env.recommended_actions
+            RecommendedActionModel(**a.model_dump(mode="json")) for a in env.recommended_actions
         ],
         reasons=[
             ReasonModel(

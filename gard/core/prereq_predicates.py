@@ -194,10 +194,7 @@ def eval_min_current_version(
             "min_current_version",
             required={"min_version": required_version},
             observed={"observed_firmware": observed},
-            detail=(
-                f"observed_firmware={observed!r} < required "
-                f"min_version={required_version!r}"
-            ),
+            detail=(f"observed_firmware={observed!r} < required min_version={required_version!r}"),
         )
     return None
 
@@ -336,10 +333,7 @@ def eval_region_in(
             "region_in",
             required={"regions": allowed},
             observed={"region": device.region},
-            detail=(
-                f"device region={device.region!r} is not in the allowed "
-                f"set {allowed}"
-            ),
+            detail=(f"device region={device.region!r} is not in the allowed set {allowed}"),
         )
     return None
 

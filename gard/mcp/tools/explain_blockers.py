@@ -76,9 +76,7 @@ def invoke(
         target_version=row.target_version,
         observed_version=row.observed_version,
         blockers=[BlockerModel(**b) for b in (row.blockers or [])],
-        recommended_actions=[
-            RecommendedActionModel(**a) for a in (row.recommended_actions or [])
-        ],
+        recommended_actions=[RecommendedActionModel(**a) for a in (row.recommended_actions or [])],
         as_of=dt.datetime.now(dt.UTC),
         correlation_id=get_correlation_id() or "anonymous-correlation",
     )

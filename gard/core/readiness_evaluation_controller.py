@@ -426,8 +426,7 @@ def evaluate(
             device=device,
             reason_kind=reason_kind,
             reason_detail=(
-                f"latest compliance_state={f3_row.compliance_state!r}; "
-                f"readiness not applicable"
+                f"latest compliance_state={f3_row.compliance_state!r}; readiness not applicable"
             ),
             f3_row=f3_row,
             now=now,
@@ -561,7 +560,9 @@ def evaluate(
     # Atomically transition the device's lifecycle_state — the F3
     # carve-out path doesn't reach here, so device.lifecycle_state is
     # `outside_target` (or a previously-set F4 verdict).
-    new_lifecycle = LifecycleState.ready_for_uplift if state == "ready_for_uplift" else LifecycleState.blocked
+    new_lifecycle = (
+        LifecycleState.ready_for_uplift if state == "ready_for_uplift" else LifecycleState.blocked
+    )
     prev_lifecycle = device.lifecycle_state.value
     device.lifecycle_state = new_lifecycle
 
@@ -727,8 +728,7 @@ def evaluate_many(
     requested = len(ids)
     if requested > settings.compliance_evaluate_max_batch:
         raise ValueError(
-            f"too many devices: requested={requested}, "
-            f"cap={settings.compliance_evaluate_max_batch}"
+            f"too many devices: requested={requested}, cap={settings.compliance_evaluate_max_batch}"
         )
 
     evaluated = 0

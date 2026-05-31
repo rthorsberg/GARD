@@ -159,10 +159,7 @@ def schedule_uplift_wave(
         target_version=target_version,
         target_platform_family=target_platform_family,
         requires=[Permission.READ_READINESS],
-        detail=(
-            f"device is ready for uplift to {target_version!r}; queue "
-            f"for the next wave"
-        ),
+        detail=(f"device is ready for uplift to {target_version!r}; queue for the next wave"),
     )
 
 

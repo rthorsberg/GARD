@@ -134,9 +134,7 @@ class SummaryResponse(BaseModel):
     ready_for_uplift_count: int = Field(ge=0)
     blocked_count: int = Field(ge=0)
     not_applicable_count: int = Field(ge=0)
-    top_blocker_categories: list[BlockerCategoryCount] = Field(
-        default_factory=list, max_length=10
-    )
+    top_blocker_categories: list[BlockerCategoryCount] = Field(default_factory=list, max_length=10)
     filters_applied: dict[str, str] = Field(default_factory=dict)
     as_of: dt.datetime
     correlation_id: str

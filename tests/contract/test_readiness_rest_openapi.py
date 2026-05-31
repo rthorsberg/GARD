@@ -114,9 +114,7 @@ def test_served_schema_includes_f4_recommended_action_kinds(served_schema: dict)
     all_enum_values: set[str] = set()
     _collect_enum_values(served_schema.get("components", {}), all_enum_values)
     missing = expected_kinds - all_enum_values
-    assert not missing, (
-        f"served OpenAPI is missing F4 RecommendedActionKind values: {missing}"
-    )
+    assert not missing, f"served OpenAPI is missing F4 RecommendedActionKind values: {missing}"
 
 
 def test_served_schema_includes_all_blocker_predicate_kinds(served_schema: dict) -> None:

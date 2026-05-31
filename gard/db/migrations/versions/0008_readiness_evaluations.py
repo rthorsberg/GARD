@@ -107,9 +107,7 @@ def upgrade() -> None:
         sa.Column("correlation_id", sa.String(64), nullable=False),
         sa.Column("actor", sa.String(255), nullable=False),
         sa.CheckConstraint(
-            "readiness_state IN ("
-            + ", ".join(f"'{v}'" for v in READINESS_STATES)
-            + ")",
+            "readiness_state IN (" + ", ".join(f"'{v}'" for v in READINESS_STATES) + ")",
             name="ck_readiness_eval_state",
         ),
         sa.CheckConstraint(
@@ -131,9 +129,7 @@ def upgrade() -> None:
         "ix_readiness_evaluations_state",
         "readiness_evaluations",
         ["readiness_state"],
-        postgresql_where=sa.text(
-            "readiness_state IN ('ready_for_uplift', 'blocked')"
-        ),
+        postgresql_where=sa.text("readiness_state IN ('ready_for_uplift', 'blocked')"),
     )
     op.create_index(
         "ix_readiness_evaluations_first_blocker_kind",

@@ -97,9 +97,7 @@ class ReadinessEvaluation(Base):
         Index(
             "ix_readiness_evaluations_state",
             "readiness_state",
-            postgresql_where=text(
-                "readiness_state IN ('ready_for_uplift', 'blocked')"
-            ),
+            postgresql_where=text("readiness_state IN ('ready_for_uplift', 'blocked')"),
         ),
         Index(
             "ix_readiness_evaluations_first_blocker_kind",
