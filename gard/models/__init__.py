@@ -62,6 +62,7 @@ from gard.models.lifecycle_evidence import LifecycleEvidence  # noqa: E402
 from gard.models.manual_mapping import ManualMapping  # noqa: E402
 from gard.models.normalization_rule import NormalizationRule  # noqa: E402
 from gard.models.observation import DeviceObservation  # noqa: E402
+from gard.models.readiness_evaluation import ReadinessEvaluation  # noqa: E402
 
 __all__ = [
     "ApiToken",
@@ -81,6 +82,7 @@ __all__ = [
     "NormalizationRule",
     "PredicateKind",
     "PrereqSeverity",
+    "ReadinessEvaluation",
     "utcnow",
     "uuid7_default",
 ]

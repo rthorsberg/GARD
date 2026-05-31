@@ -194,6 +194,12 @@ RecommendedActionKind = Literal[
     "escalate_to_catalog_owner",
     # Reserved for F5 — F3 will never emit this; contract surface only.
     "acknowledge_exception",
+    # F4 (readiness & prerequisites) additions — see ADR-0015.
+    "schedule_uplift_wave",
+    "hardware_refresh",
+    "license_acquire",
+    "firmware_intermediate_step",
+    "import_observation",
 ]
 
 
@@ -276,6 +282,123 @@ def build_compliance_envelope(
         facts=facts or {},
         reasons=reasons or [],
         recommended_actions=recommended_actions or [],
+        confidence=confidence,
+        evaluation_id=evaluation_id,
+        evaluated_at=evaluated_at or utcnow(),
+        correlation_id=correlation_id or get_correlation_id(),
+    )
+
+
+# ---- F4: readiness envelope -------------------------------------------
+# Bridges F3's drift verdict and F5's uplift-wave planner: which
+# `outside_target` devices are SAFE to schedule and which are blocked,
+# with each blocker citing a specific F2 rule (or a closed-enum
+# synthetic kind). See ADR-0015 for the precedence/ordering rules.
+
+ReadinessState = Literal[
+    "ready_for_uplift",
+    "blocked",
+    "not_applicable",
+]
+
+BlockerPredicateKind = Literal[
+    # Inherited verbatim from F2's PredicateKind enum:
+    "min_ram_mb",
+    "min_disk_mb",
+    "min_current_version",
+    "hardware_revision_in",
+    "license_present",
+    "intermediate_version_required",
+    "not_in_state",
+    "region_in",
+    "tagged_with",
+    # F4 synthetic kinds — not in F2's catalogue:
+    "missing_upgrade_path",
+    "missing_observation_field",
+]
+
+BlockerSeverity = Literal["required", "recommended"]
+
+# `not_applicable` carve-out reason kinds. The per-device endpoint's
+# `reasons[]` array carries exactly one of these on a not_applicable
+# verdict; the summary endpoint uses them for stale-input skipping.
+ReadinessNotApplicableReason = Literal[
+    "already_compliant",
+    "no_target_resolved",
+    "no_observation_to_verify",
+    "lifecycle_unknown",
+    "no_compliance_evaluation",
+    "stale_compliance_input",
+]
+
+
+class Blocker(BaseModel):
+    """One failed prerequisite (or synthetic equivalent) for a device.
+
+    `rule_id` is null for synthetic blockers (`missing_upgrade_path`,
+    `missing_observation_field`); non-null when the blocker comes from
+    an evaluated F2 `FirmwarePrerequisiteRule`. `required` and
+    `observed` carry predicate-kind-specific JSON payloads — operators
+    can read the `detail` string; tooling parses the structured pair.
+    """
+
+    rule_id: str | None = None
+    rule_name: str | None = None
+    predicate_kind: BlockerPredicateKind
+    severity: BlockerSeverity
+    required: dict[str, Any] | None = None
+    observed: dict[str, Any] | None = None
+    detail: str
+
+
+class ReadinessEnvelope(BaseModel):
+    """F4 readiness envelope — sibling of `ComplianceEnvelope`."""
+
+    state: ReadinessState
+    summary: str
+    target_version: str | None = None
+    observed_version: str | None = None
+    upgrade_path_exists: bool = False
+    applicable_rules_count: int = Field(default=0, ge=0)
+    blockers: list[Blocker] = Field(default_factory=list)
+    recommended_actions: list[RecommendedAction] = Field(default_factory=list)
+    reasons: list[ComplianceReason] = Field(default_factory=list)
+    compliance_evaluation_ref: str | None = None
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    evaluation_id: str | None = None
+    evaluated_at: dt.datetime
+    correlation_id: str | None = None
+
+
+def build_readiness_envelope(
+    *,
+    state: ReadinessState,
+    summary: str,
+    target_version: str | None = None,
+    observed_version: str | None = None,
+    upgrade_path_exists: bool = False,
+    applicable_rules_count: int = 0,
+    blockers: list[Blocker] | None = None,
+    recommended_actions: list[RecommendedAction] | None = None,
+    reasons: list[ComplianceReason] | None = None,
+    compliance_evaluation_ref: str | None = None,
+    confidence: float = 1.0,
+    evaluation_id: str | None = None,
+    evaluated_at: dt.datetime | None = None,
+    correlation_id: str | None = None,
+) -> ReadinessEnvelope:
+    """Construct a :class:`ReadinessEnvelope` from positional inputs."""
+    return ReadinessEnvelope(
+        state=state,
+        summary=summary,
+        target_version=target_version,
+        observed_version=observed_version,
+        upgrade_path_exists=upgrade_path_exists,
+        applicable_rules_count=applicable_rules_count,
+        blockers=blockers or [],
+        recommended_actions=recommended_actions or [],
+        reasons=reasons or [],
+        compliance_evaluation_ref=compliance_evaluation_ref,
         confidence=confidence,
         evaluation_id=evaluation_id,
         evaluated_at=evaluated_at or utcnow(),

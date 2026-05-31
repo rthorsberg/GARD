@@ -142,6 +142,30 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- F4: readiness & prerequisites ----------------------------------
+    readiness_stale_days: int = Field(
+        default=30,
+        ge=1,
+        description=(
+            "If the latest F3 ComplianceEvaluation for a device is older "
+            "than this threshold, the per-device readiness endpoint "
+            "refuses to derive a verdict from it (returns 409 "
+            "READINESS_INPUT_STALE per R-8). The summary endpoint "
+            "silently classifies such devices as not_applicable with "
+            "reason=stale_compliance_input."
+        ),
+    )
+    readiness_upgrade_weight_cap: int = Field(
+        default=1000,
+        ge=1,
+        description=(
+            "Maximum cumulative edge-weight allowed for an upgrade-path "
+            "chain to count as 'reachable' for readiness purposes. "
+            "Chains whose summed weight exceeds the cap are treated as "
+            "missing_upgrade_path (severity=required)."
+        ),
+    )
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_weak_prod_secret(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]
