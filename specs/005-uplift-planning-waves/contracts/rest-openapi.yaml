@@ -1,0 +1,411 @@
+openapi: 3.1.0
+info:
+  title: GARD — F5 Uplift Planning & Waves
+  version: "0.5.0"
+  description: |
+    Reviewable, approvable, audited change packets built on top of F4's
+    `ready_for_uplift` pool. v1 is dry-run only — no execution surface;
+    F5 stops at the `approved` state and the future executor (F7+) consumes
+    it via lifecycle_state + audit chain.
+
+servers:
+  - url: /api/v1
+    description: GARD API root
+
+paths:
+  /uplift/plans:
+    get:
+      summary: List uplift plans (paginated)
+      operationId: listUpliftPlans
+      parameters:
+        - { name: include_archived, in: query, schema: { type: boolean, default: false } }
+        - { name: region, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 50 } }
+        - { name: page_token, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/PlanList" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create an uplift plan
+      operationId: createUpliftPlan
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreatePlanRequest" } } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/PlanEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /uplift/plans/{plan_id}/archive:
+    post:
+      summary: Archive an uplift plan
+      operationId: archiveUpliftPlan
+      parameters:
+        - { name: plan_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/PlanEnvelope" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /uplift/plans/{plan_id}/waves:
+    post:
+      summary: Draft a new uplift wave inside a plan
+      operationId: createUpliftWave
+      parameters:
+        - { name: plan_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateWaveRequest" } } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } }
+        "200":
+          description: Idempotent replay — original row returned.
+          content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } }
+        "422":
+          description: |
+            Validation failed. `EMPTY_WAVE` (zero devices match), `INELIGIBLE_DEVICES_IN_SCOPE`
+            (mixed pool with mode=strict), `INVALID_CHANGE_WINDOW`, `TARGET_VERSION_NOT_LIVE`.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /uplift/waves:
+    get:
+      summary: List uplift waves (paginated)
+      operationId: listUpliftWaves
+      parameters:
+        - { name: plan_id, in: query, schema: { type: string, format: uuid } }
+        - { name: state, in: query, schema: { $ref: "#/components/schemas/WaveState" } }
+        - { name: target_version, in: query, schema: { type: string } }
+        - { name: region, in: query, schema: { type: string } }
+        - { name: site, in: query, schema: { type: string } }
+        - { name: platform_family, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 50 } }
+        - { name: page_token, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/WaveList" } } }
+
+  /uplift/waves/{wave_id}:
+    get:
+      summary: Get an uplift wave envelope
+      operationId: getUpliftWave
+      parameters:
+        - { name: wave_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /uplift/waves/{wave_id}/submit:
+    post:
+      summary: Submit a draft wave for review
+      operationId: submitUpliftWave
+      parameters:
+        - { name: wave_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } } }
+        "409":
+          description: WAVE_STATE_MISMATCH or WAVE_TRANSITION_FORBIDDEN.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /uplift/waves/{wave_id}/approve:
+    post:
+      summary: Approve a submitted wave
+      operationId: approveUpliftWave
+      parameters:
+        - { name: wave_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ApproveRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } } }
+        "403":
+          description: SELF_APPROVAL_FORBIDDEN.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+        "409":
+          description: WAVE_STATE_MISMATCH.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /uplift/waves/{wave_id}/reject:
+    post:
+      summary: Reject a submitted wave
+      operationId: rejectUpliftWave
+      parameters:
+        - { name: wave_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RejectRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } } }
+
+  /uplift/waves/{wave_id}/cancel:
+    post:
+      summary: Cancel a draft or submitted wave
+      operationId: cancelUpliftWave
+      parameters:
+        - { name: wave_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CancelRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/WaveEnvelope" } } } }
+
+  /uplift/exceptions:
+    get:
+      summary: List uplift exceptions (paginated)
+      operationId: listUpliftExceptions
+      parameters:
+        - { name: device_id, in: query, schema: { type: string, format: uuid } }
+        - { name: state, in: query, schema: { $ref: "#/components/schemas/ExceptionState" } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 50 } }
+        - { name: page_token, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/ExceptionList" } } }
+    post:
+      summary: File an exception for a blocked device
+      operationId: createException
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateExceptionRequest" } } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/ExceptionEnvelope" } } }
+        "409":
+          description: EXCEPTION_ALREADY_ACTIVE.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /uplift/exceptions/{exception_id}/approve:
+    post:
+      summary: Approve a pending exception
+      operationId: approveException
+      parameters:
+        - { name: exception_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ExceptionEnvelope" } } } }
+        "403":
+          description: SELF_APPROVAL_FORBIDDEN.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+components:
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    NotFound:
+      description: Entity not found.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    ValidationError:
+      description: 422 validation error envelope.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  schemas:
+    WaveState:
+      type: string
+      enum: [draft, submitted, approved, rejected, cancelled, invalidated]
+
+    ExceptionState:
+      type: string
+      enum: [pending_review, approved, rejected, expired, withdrawn]
+
+    CreatePlanRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 8000 }
+
+    CreateWaveRequest:
+      type: object
+      additionalProperties: false
+      required: [name, target_version, target_platform_family, scope_selector, change_window_start, change_window_end]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        target_version: { type: string, minLength: 1, maxLength: 64 }
+        target_platform_family: { type: string, minLength: 1, maxLength: 64 }
+        scope_selector:
+          type: object
+          additionalProperties: true
+        mode:
+          type: string
+          enum: [strict, skip_ineligible]
+          default: strict
+        change_window_start: { type: string, format: date-time }
+        change_window_end: { type: string, format: date-time }
+
+    ApproveRequest:
+      type: object
+      additionalProperties: false
+      required: [citation]
+      properties:
+        citation: { type: string, minLength: 20, maxLength: 2000 }
+
+    RejectRequest:
+      type: object
+      additionalProperties: false
+      required: [citation]
+      properties:
+        citation: { type: string, minLength: 20, maxLength: 2000 }
+
+    CancelRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 500 }
+
+    CreateExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [device_id, justification, expires_at]
+      properties:
+        device_id: { type: string, format: uuid }
+        blocker_rule_id: { type: string, format: uuid }
+        synthetic_kind:
+          type: string
+          enum: [missing_upgrade_path, missing_observation_field]
+        justification: { type: string, minLength: 20, maxLength: 2000 }
+        expires_at: { type: string, format: date-time }
+
+    PlanEnvelope:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        archived_at: { type: string, format: date-time, nullable: true }
+        archived_by: { type: string, nullable: true }
+        wave_count: { type: integer, minimum: 0 }
+        correlation_id: { type: string }
+
+    WaveEnvelope:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        name: { type: string }
+        state: { $ref: "#/components/schemas/WaveState" }
+        target_version: { type: string }
+        target_platform_family: { type: string }
+        change_window_start: { type: string, format: date-time }
+        change_window_end: { type: string, format: date-time }
+        drafted_by: { type: string }
+        drafted_at: { type: string, format: date-time }
+        submitted_by: { type: string, nullable: true }
+        submitted_at: { type: string, format: date-time, nullable: true }
+        approved_by: { type: string, nullable: true }
+        approved_at: { type: string, format: date-time, nullable: true }
+        approval_citation: { type: string, nullable: true }
+        rejected_by: { type: string, nullable: true }
+        rejected_at: { type: string, format: date-time, nullable: true }
+        rejection_citation: { type: string, nullable: true }
+        cancelled_by: { type: string, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        cancellation_reason: { type: string, nullable: true }
+        invalidated_at: { type: string, format: date-time, nullable: true }
+        invalidated_reason: { type: string, nullable: true }
+        device_count: { type: integer, minimum: 0 }
+        devices:
+          type: array
+          items: { $ref: "#/components/schemas/WaveDeviceRow" }
+        skipped:
+          type: array
+          items: { $ref: "#/components/schemas/SkippedDevice" }
+        correlation_id: { type: string }
+
+    WaveDeviceRow:
+      type: object
+      additionalProperties: false
+      properties:
+        device_id: { type: string, format: uuid }
+        hostname: { type: string }
+        position: { type: integer, minimum: 1 }
+        snapshot_target_version: { type: string, nullable: true }
+        snapshot_observed_version: { type: string, nullable: true }
+        readiness_evaluation_ref: { type: string, format: uuid, nullable: true }
+
+    SkippedDevice:
+      type: object
+      additionalProperties: false
+      properties:
+        device_id: { type: string, format: uuid }
+        reason: { type: string }
+        current_readiness_state: { type: string, nullable: true }
+
+    ExceptionEnvelope:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        blocker_rule_id: { type: string, format: uuid, nullable: true }
+        synthetic_kind: { type: string, nullable: true }
+        justification: { type: string }
+        state: { $ref: "#/components/schemas/ExceptionState" }
+        filed_by: { type: string }
+        filed_at: { type: string, format: date-time }
+        approved_by: { type: string, nullable: true }
+        approved_at: { type: string, format: date-time, nullable: true }
+        rejected_by: { type: string, nullable: true }
+        rejected_at: { type: string, format: date-time, nullable: true }
+        withdrawn_by: { type: string, nullable: true }
+        withdrawn_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time }
+        expired_at: { type: string, format: date-time, nullable: true }
+        correlation_id: { type: string }
+
+    PlanList:
+      type: object
+      additionalProperties: false
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/PlanEnvelope" } }
+        total_returned: { type: integer, minimum: 0 }
+        next_page_token: { type: string, nullable: true }
+
+    WaveList:
+      type: object
+      additionalProperties: false
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/WaveEnvelope" } }
+        total_returned: { type: integer, minimum: 0 }
+        next_page_token: { type: string, nullable: true }
+
+    ExceptionList:
+      type: object
+      additionalProperties: false
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ExceptionEnvelope" } }
+        total_returned: { type: integer, minimum: 0 }
+        next_page_token: { type: string, nullable: true }
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: true, nullable: true }
+            correlation_id: { type: string, nullable: true }
