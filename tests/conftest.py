@@ -84,6 +84,7 @@ _DATA_TABLES = (
     "uplift_exceptions",
     "uplift_waves",
     "uplift_plans",
+    "netbox_sync_runs",
     "readiness_evaluations",
     "compliance_evaluations",
     "manual_mappings",

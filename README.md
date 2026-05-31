@@ -150,11 +150,13 @@ Complexity Tracking section and be approved before implementation.
   (ADR-0016), `Exception` escape hatch for blocked devices, lazy
   exception expiry wired into F4 evaluate, uplift REST surface, and
   six read-shaped MCP delegates.
-- 🚧 **F6 — MVP Vertical Slice Validation** on
-  `006-mvp-vertical-slice-cisco-isr1121` (implementation). Cisco ISR1121
-  end-to-end proof: `test_mvp_vertical_slice_isr1121.py` (12 tests, all
-  ten MVP criteria), ISR1121 catalog fixtures, `seed-isr1121.sh`.
-- ⏭️ **Next after F6**: F7 — NetBox integration (read-only).
+- ✅ **F6 — MVP Vertical Slice Validation** shipped on `main` (PR #6).
+  Cisco ISR1121 end-to-end proof: 12 integration tests, ISR1121 catalog,
+  `seed-isr1121.sh`.
+- 🚧 **F7 — NetBox Integration (read-only)** on
+  `007-netbox-integration-read`. Pull device identity from NetBox REST;
+  isolated dev stack on port **18888** (`gard-f7-netbox` Docker project).
+- ⏭️ **Next after F7**: execution adapters / MCP transport (post-v1).
 
 ## Quickstart
 

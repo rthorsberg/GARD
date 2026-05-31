@@ -89,6 +89,16 @@ class EvidenceType(enum.StrEnum):
     # of loaded git SHAs, so a later auditor can confirm "this DB state
     # came from exactly these N files at exactly these commits".
     firmware_catalog_load = "firmware_catalog_load"
+    # F7: chain-of-custody record for a NetBox sync run.
+    netbox_sync = "netbox_sync"
+
+
+class NetboxSyncRunStatus(enum.StrEnum):
+    """F7 NetBox sync run lifecycle."""
+
+    running = "running"
+    completed = "completed"
+    failed = "failed"
 
 
 class Role(enum.StrEnum):

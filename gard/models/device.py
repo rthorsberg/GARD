@@ -46,6 +46,13 @@ class Device(Base):
     disk_mb: Mapped[int | None] = mapped_column(Integer, nullable=True)
     licenses: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
+    # F7 — NetBox identity reference (read-only sync).
+    netbox_device_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    netbox_last_synced_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+
     source_system: Mapped[str] = mapped_column(String, nullable=False)
     lifecycle_state: Mapped[LifecycleState] = mapped_column(
         Enum(
@@ -97,6 +104,12 @@ class Device(Base):
         ),
         Index("ix_devices_vendor_model", "vendor_normalized", "model_normalized"),
         Index("ix_devices_lifecycle_state", "lifecycle_state"),
+        Index(
+            "uq_devices_netbox_device_id",
+            "netbox_device_id",
+            unique=True,
+            postgresql_where=text("netbox_device_id IS NOT NULL"),
+        ),
     )
 
     def __repr__(self) -> str:  # pragma: no cover

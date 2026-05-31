@@ -215,6 +215,31 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- F7: NetBox integration (read-only) ------------------------------
+    netbox_url: HttpUrl | None = Field(
+        default=None,
+        description="NetBox base URL (e.g. http://127.0.0.1:18888). Optional until sync.",
+    )
+    netbox_token: str | None = Field(
+        default=None,
+        description="Read-only NetBox API token (Authorization: Token …).",
+    )
+    netbox_verify_tls: bool = Field(
+        default=True,
+        description="Verify TLS certificates when calling NetBox.",
+    )
+    netbox_timeout_seconds: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=300.0,
+        description="HTTP timeout for NetBox REST calls.",
+    )
+    netbox_sync_max_devices: int = Field(
+        default=50_000,
+        ge=1,
+        description="Hard cap on devices pulled per sync run.",
+    )
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_weak_prod_secret(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]
