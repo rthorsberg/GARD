@@ -143,6 +143,89 @@ def escalate_to_catalog_owner(
     )
 
 
+# ---- F4 builders (readiness & prerequisites) ----------------------------
+
+
+def schedule_uplift_wave(
+    *,
+    device_id: uuid.UUID,
+    target_version: str | None,
+    target_platform_family: str | None,
+) -> RecommendedAction:
+    """ready_for_uplift: F5's primary input."""
+    return RecommendedAction(
+        kind="schedule_uplift_wave",
+        target_device_id=str(device_id),
+        target_version=target_version,
+        target_platform_family=target_platform_family,
+        requires=[Permission.READ_READINESS],
+        detail=(
+            f"device is ready for uplift to {target_version!r}; queue "
+            f"for the next wave"
+        ),
+    )
+
+
+def hardware_refresh(
+    *,
+    device_id: uuid.UUID,
+    detail: str,
+) -> RecommendedAction:
+    """min_ram_mb / min_disk_mb / hardware_revision_in: physical refresh."""
+    return RecommendedAction(
+        kind="hardware_refresh",
+        target_device_id=str(device_id),
+        requires=[],
+        detail=detail,
+    )
+
+
+def license_acquire(
+    *,
+    device_id: uuid.UUID,
+    detail: str,
+) -> RecommendedAction:
+    """license_present blocker: procurement work."""
+    return RecommendedAction(
+        kind="license_acquire",
+        target_device_id=str(device_id),
+        requires=[],
+        detail=detail,
+    )
+
+
+def firmware_intermediate_step(
+    *,
+    device_id: uuid.UUID,
+    target_version: str | None,
+    target_platform_family: str | None,
+    detail: str,
+) -> RecommendedAction:
+    """intermediate_version_required OR missing_upgrade_path blockers."""
+    return RecommendedAction(
+        kind="firmware_intermediate_step",
+        target_device_id=str(device_id),
+        target_version=target_version,
+        target_platform_family=target_platform_family,
+        requires=[Permission.READ_FIRMWARE_CATALOG],
+        detail=detail,
+    )
+
+
+def import_observation(
+    *,
+    device_id: uuid.UUID,
+    detail: str,
+) -> RecommendedAction:
+    """missing_observation_field blocker: F1/F7 data-hygiene work."""
+    return RecommendedAction(
+        kind="import_observation",
+        target_device_id=str(device_id),
+        requires=[Permission.IMPORT_DEVICES],
+        detail=detail,
+    )
+
+
 # ---- top-level composer --------------------------------------------------
 
 
