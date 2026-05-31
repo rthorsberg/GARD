@@ -21,7 +21,13 @@ bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 red()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
 
-require docker curl python3
+require() {
+  command -v "$1" >/dev/null 2>&1 || { red "missing required command: $1"; exit 127; }
+}
+
+require docker
+require curl
+require python3
 
 bold "==> Waiting for API at $API_BASE/healthz"
 for i in $(seq 1 30); do

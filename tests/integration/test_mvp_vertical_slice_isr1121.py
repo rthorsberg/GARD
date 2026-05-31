@@ -57,7 +57,13 @@ class TestImport:
         """MVP-02 — counter invariant holds."""
         _, summary = import_isr1121_fixture(client, db_session, project_root)
         t = summary["totals"]
-        assert t["rows_total"] == t["rows_accepted"] + t["rows_rejected"] + t["rows_duplicate"] + t["rows_manual_review"]
+        assert (
+            t["rows_total"]
+            == t["rows_accepted"]
+            + t["rows_rejected"]
+            + t["rows_duplicate"]
+            + t["rows_manual_review"]
+        )
 
 
 class TestNormalize:
