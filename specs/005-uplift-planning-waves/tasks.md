@@ -117,7 +117,7 @@ Status convention: `[ ]` pending · `[x]` done · `[~]` in progress.
 
 ## Phase 10 — Polish + sign-off (slice 5d)
 
-- [x] **T085** — `uv run ruff format .` pass; final `uv run pytest -q && uv run ruff check . && uv run mypy gard` clean; commit; mark PR #5 ready for review; verify CI green; squash-merge to main.
+- [~] **T085** — `uv run ruff format .` pass; final `uv run pytest -q && uv run ruff check . && uv run mypy gard` clean; commit; mark PR #5 ready for review; verify CI green; squash-merge to main. *(Ready for review — merge pending your approval.)*
 
 ---
 
