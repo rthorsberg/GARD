@@ -253,6 +253,78 @@ for it in r['items']:
     print(f'    {it[\"hostname\"]:<14} state={env[\"state\"]:<18} primary={primary_kind:<28} rule={primary_rule}')
 " 2>/dev/null || dim "    (skipped: readiness/devices listing endpoint not reachable)"
 
+bold "==> F5: minting approver token (subject=approver@example.com, role=change_approver)"
+APPROVER_TOKEN=$(docker compose -f "$COMPOSE_FILE" exec -T api \
+  python -m gard issue-token \
+    --subject "approver@example.com" \
+    --role    change_approver \
+    --ttl-seconds "$TTL" \
+  2>/dev/null | tr -d '\r\n' || true)
+if [[ -n "$APPROVER_TOKEN" && "$APPROVER_TOKEN" =~ ^eyJ[A-Za-z0-9._-]+$ ]]; then
+  dim "    approver token minted"
+else
+  dim "    (skipped: could not mint approver token)"
+  APPROVER_TOKEN=""
+fi
+
+bold "==> F5: create uplift plan + draft wave (if ready_for_uplift devices exist)"
+F5_PLAN=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"name":"seed-demo-plan","description":"Created by deploy/scripts/seed.sh"}' \
+  "$API_BASE/api/v1/uplift/plans" 2>/dev/null || echo '{}')
+PLAN_ID=$(echo "$F5_PLAN" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('id',''))" 2>/dev/null || echo "")
+if [[ -n "$PLAN_ID" ]]; then
+  dim "    plan_id=$PLAN_ID"
+  START=$(python3 -c "import datetime as dt; s=dt.datetime.now(dt.UTC)+dt.timedelta(hours=24); e=s+dt.timedelta(hours=2); print(s.isoformat()); print(e.isoformat())")
+  CW_START=$(echo "$START" | sed -n '1p')
+  CW_END=$(echo "$START" | sed -n '2p')
+  F5_WAVE=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "content-type: application/json" \
+    -H "Idempotency-Key: seed-f5-wave" \
+    -d "{\"name\":\"seed-demo-wave\",\"target_version\":\"7.8.1\",\"target_platform_family\":\"iosxr\",\"scope_selector\":{\"site\":\"bergen-1\"},\"mode\":\"skip_ineligible\",\"change_window_start\":\"$CW_START\",\"change_window_end\":\"$CW_END\"}" \
+    "$API_BASE/api/v1/uplift/plans/$PLAN_ID/waves" 2>/dev/null || echo '{}')
+  WAVE_ID=$(echo "$F5_WAVE" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('id',''))" 2>/dev/null || echo "")
+  if [[ -n "$WAVE_ID" ]]; then
+    echo "$F5_WAVE" | python3 -c "
+import json, sys
+w = json.loads(sys.stdin.read())
+print(f'    wave_id={w[\"id\"]} state={w[\"state\"]} devices={w[\"device_count\"]} skipped={len(w.get(\"skipped\") or [])}')
+" 2>/dev/null || true
+    if [[ -n "$APPROVER_TOKEN" && "$(echo "$F5_WAVE" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('device_count',0))" 2>/dev/null || echo 0)" -gt 0 ]]; then
+      curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
+        "$API_BASE/api/v1/uplift/waves/$WAVE_ID/submit" >/dev/null 2>&1 || true
+      curl -sS -X POST -H "Authorization: Bearer $APPROVER_TOKEN" \
+        -H "content-type: application/json" \
+        -d '{"citation":"Seed demo approval — change ticket CHG-SEED-001 recorded in CAB."}' \
+        "$API_BASE/api/v1/uplift/waves/$WAVE_ID/approve" >/dev/null 2>&1 || true
+      dim "    submitted + approved with separate approver principal"
+    fi
+  else
+    dim "    (no wave drafted — fixture may have zero ready_for_uplift devices)"
+  fi
+else
+  dim "    (skipped: uplift plan endpoint not reachable)"
+fi
+
+bold "==> F5: estate-wide plan + wave summary"
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/uplift/plans" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    plans_returned={r[\"total_returned\"]}')
+for p in r.get('items') or []:
+    print(f'      - {p[\"name\"]:<20} waves={p[\"wave_count\"]} archived={bool(p.get(\"archived_at\"))}')
+" 2>/dev/null || dim "    (skipped: uplift/plans endpoint not reachable)"
+
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/uplift/waves?limit=20" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    waves_returned={r[\"total_returned\"]}')
+for w in r.get('items') or []:
+    print(f'      - {w[\"name\"]:<20} state={w[\"state\"]:<10} devices={w[\"device_count\"]} target={w[\"target_version\"]}')
+" 2>/dev/null || dim "    (skipped: uplift/waves endpoint not reachable)"
+
 bold "==> Done."
 echo
 echo "Token (also at .gard/token.jwt):"

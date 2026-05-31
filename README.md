@@ -144,7 +144,13 @@ Complexity Tracking section and be approved before implementation.
   `/devices/{id}/readiness`, `/readiness/evaluate`), four MCP tool
   delegates, and a reload-sync extension that adds prereq-rule-touched
   devices to F3's existing affected set.
-- ⏭️ **Next**: F5 — Uplift Planning (wave drafting + change windows).
+- 🚧 **F5 — Uplift Planning & Waves** on `005-uplift-planning-waves`
+  (PR #5, in review). Turns F4's `ready_for_uplift` pool into
+  reviewable change packets: `UpliftPlan` + `UpliftWave` with
+  separation-of-duties approval (ADR-0016), `Exception` escape hatch
+  for blocked devices, lazy exception expiry wired into F4 evaluate,
+  14 REST endpoints, and six read-shaped MCP delegates.
+- ⏭️ **Next**: F6 — MVP vertical slice (Cisco ISR1121 end-to-end proof).
 
 ## Quickstart
 
@@ -198,6 +204,11 @@ After `make seed` you should see:
     r3.oslo        state=not_applicable     primary=-                      rule=-
     r4.bergen      state=not_applicable     primary=-                      rule=-
     r5.bergen      state=not_applicable     primary=-                      rule=-
+
+==> F5: estate-wide plan + wave summary
+    plans_returned=1
+      - seed-demo-plan       waves=0 archived=False
+    waves_returned=0
 ```
 
 The `r3.oslo` device shows `classified` + `catalog_drift` (no firmware

@@ -47,6 +47,12 @@ RecommendedActionKind = Literal[
     "license_acquire",
     "firmware_intermediate_step",
     "import_observation",
+    # F5 (uplift planning & waves) additions (data-model.md §2.4):
+    "submit_for_approval",
+    "assign_approver",
+    "extend_change_window",
+    "request_exception_review",
+    "cancel_wave",
 ]
 
 ReasonKind = Literal[

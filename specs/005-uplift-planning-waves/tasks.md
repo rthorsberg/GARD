@@ -105,19 +105,19 @@ Status convention: `[ ]` pending · `[x]` done · `[~]` in progress.
 
 ## Phase 8 — Contract lock (slice 5d)
 
-- [ ] **T079** — Contract test `tests/contract/test_uplift_rest_openapi.py` — parses `contracts/rest-openapi.yaml`; asserts every contract path + method + parameter is in `/openapi.json`.
-- [ ] **T080** — Schema enum coverage tests — assert all `WaveState`, `ExceptionState`, new `RecommendedActionKind` values, and `active_exception` reason kind appear in served schema (recursive enum walk per F4 pattern).
-- [ ] **T081** — Assert the new role `change_approver` is registered with `READ_UPLIFT`, `APPROVE_UPLIFT_WAVE`, `APPROVE_EXCEPTION` and nothing else.
-- [ ] **T082** — Run full test suite + lint + mypy; commit slice 5d Part 1.
+- [x] **T079** — Contract test `tests/contract/test_uplift_rest_openapi.py` — parses `contracts/rest-openapi.yaml`; asserts every contract path + method + parameter is in `/openapi.json`.
+- [x] **T080** — Schema enum coverage tests — assert all `WaveState`, `ExceptionState`, new `RecommendedActionKind` values, and `active_exception` reason kind appear in served schema (recursive enum walk per F4 pattern).
+- [x] **T081** — Assert the new role `change_approver` is registered with `READ_UPLIFT`, `APPROVE_UPLIFT_WAVE`, `APPROVE_EXCEPTION` and nothing else.
+- [x] **T082** — Run full test suite + lint + mypy; commit slice 5d Part 1.
 
 ## Phase 9 — Seed + docs (slice 5d)
 
-- [ ] **T083** — Extend `deploy/scripts/seed.sh` with 3 new F5 sections: draft a wave, submit + approve (using a second-mint token), estate-wide plan summary.
-- [ ] **T084** — Update `README.md` Status section + Quickstart snapshot to include F5; update `ROADMAP.md` F5 row to "shipped (PR #5)" and adjust ADR-0016 entry.
+- [x] **T083** — Extend `deploy/scripts/seed.sh` with 3 new F5 sections: draft a wave, submit + approve (using a second-mint token), estate-wide plan summary.
+- [x] **T084** — Update `README.md` Status section + Quickstart snapshot to include F5; update `ROADMAP.md` F5 row to "shipped (PR #5)" and adjust ADR-0016 entry.
 
 ## Phase 10 — Polish + sign-off (slice 5d)
 
-- [ ] **T085** — `uv run ruff format .` pass; final `uv run pytest -q && uv run ruff check . && uv run mypy gard` clean; commit; mark PR #5 ready for review; verify CI green; squash-merge to main.
+- [x] **T085** — `uv run ruff format .` pass; final `uv run pytest -q && uv run ruff check . && uv run mypy gard` clean; commit; mark PR #5 ready for review; verify CI green; squash-merge to main.
 
 ---
 

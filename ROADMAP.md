@@ -67,7 +67,7 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0013 MCP firmware tools deferred to F003** (during F2) — *shipped, reassigned from "prerequisite rule grammar"; the prereq-grammar decision moves to F4*
 - **ADR-0014 Drift taxonomy formalization** (during F3) — *renumbered from planned ADR-0012*
 - **ADR-0015 Readiness verdict precedence + biconditional rules** (during F4) — *shipped; supersedes the placeholder "prerequisite rule grammar" — the prereq grammar itself was already defined by F2's `firmware_prerequisite_rules` table, so F4's binding decision became blocker precedence + state-transition biconditionals instead*
-- **ADR-0016 Plan vs wave lifecycle and approval data model** (during F5) — *renumbered from planned ADR-0014*
+- **ADR-0016 Wave state machine and separation-of-duties** (F5) — closed wave + exception state machines, three-layer SoD, lazy exception expiry, idempotency-key contract
 - **ADR-0017 NetBox integration boundary & sync model** (during F7) — *renumbered from planned ADR-0015*
 - **ADR-0018 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — *renumbered from planned ADR-0016*. Formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
 
@@ -124,6 +124,6 @@ is [`specs/001-device-import-normalize/README.md`](./specs/001-device-import-nor
 | F2 firmware-catalog | — | — | — | — | — | Not started |
 | F3 compliance-evaluation | — | — | — | — | — | Not started |
 | F4 readiness-prerequisites | — | — | — | — | — | Not started |
-| F5 uplift-planning-waves | — | — | — | — | — | Not started |
+| F5 uplift-planning-waves | `005-uplift-planning-waves` | done | done | done | in PR #5 | Shipped pending merge |
 | F6 mvp-vertical-slice-cisco-isr1121 | — | — | — | — | — | Not started |
 | F7 netbox-integration-read | — | — | — | — | — | Not started |
