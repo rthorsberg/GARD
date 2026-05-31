@@ -1,0 +1,6 @@
+hostname,site,serial_number,vendor_raw,model_raw,platform_family_raw,hardware_revision,management_ip,region,role,observed_firmware,observed_bootloader,observed_at,ram_mb,disk_mb,licenses
+r-osl-001,Oslo,FOC123456,Cisco Systems,ISR1121-8P,ios-xe,V02,10.10.1.1,NO,CPE-Aggregation,16.9.5,16.12,2026-05-20T10:00:00Z,2048,4096,
+r-osl-002,Oslo,FOC123457,Cisco Systems,ISR1121-8P,ios-xe,V02,10.10.1.2,NO,CPE-Aggregation,16.9.5,16.12,2026-05-20T10:05:00Z,2048,512,
+r-osl-001,Oslo,FOC123456,Cisco Systems,ISR1121-8P,ios-xe,V02,10.10.1.1,NO,CPE-Aggregation,16.9.5,16.12,2026-05-21T10:00:00Z,2048,4096,
+,Oslo,,Cisco Systems,ISR1121-8P,ios-xe,V02,10.10.1.9,NO,CPE-Aggregation,16.9.5,16.12,2026-05-20T10:00:00Z,2048,4096,
+r-osl-unknown,Oslo,UNK000001,WeirdCorp,X-9000,,A1,10.10.9.9,NO,lab,1.0.0,,2026-05-20T10:00:00Z,,,

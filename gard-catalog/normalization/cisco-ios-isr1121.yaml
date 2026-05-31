@@ -1,0 +1,19 @@
+# Normalization rule for Cisco ISR1121 (F6 MVP reference device).
+schema_version: 1
+vendor: cisco
+platform: ios
+version: 1
+revision: 0
+priority: 200
+confidence: high
+match:
+  model_raw_regex: '(?i)ISR1121'
+emit:
+  vendor: cisco
+  platform: ios
+  vendor_normalized: cisco
+  platform_family: ios
+  model_normalized: ISR1121
+notes: |
+  Higher priority than generic cisco-ios so ISR1121 rows get an explicit
+  model_normalized for MVP filters and MCP queries.
