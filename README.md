@@ -153,11 +153,12 @@ Complexity Tracking section and be approved before implementation.
 - ✅ **F6 — MVP Vertical Slice Validation** shipped on `main` (PR #6).
   Cisco ISR1121 end-to-end proof: 12 integration tests, ISR1121 catalog,
   `seed-isr1121.sh`.
-- 🚧 **F7 — NetBox Integration (read-only)** on
-  `007-netbox-integration-read` (PR pending). Read-only NetBox REST sync,
-  `tagged_with` evaluable from synced tags, MCP summary delegate; dev NetBox
-  on port **18888** (`gard-f7-netbox`).
-- ⏭️ **Next after F7**: execution adapters / MCP transport (post-v1).
+- ✅ **F7 — NetBox Integration (read-only)** shipped on `main` (PR #7).
+  Read-only NetBox REST sync, `tagged_with` from synced tags, MCP summary
+  delegate; dev NetBox on port **18888** (`gard-f7-netbox`).
+- 🚧 **F8 — Native MCP Transport** on `008-mcp-transport`. Live Streamable
+  HTTP server wiring all 22 F1–F7 tool contracts; closes MVP criterion #8.
+- ⏭️ **Next after F8**: execution adapters, NetBox write-back (post-v1).
 
 ## Quickstart
 
