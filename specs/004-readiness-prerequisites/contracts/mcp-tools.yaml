@@ -1,0 +1,159 @@
+# F4 MCP tool contracts (FR-022 / FR-023).
+#
+# Same pattern as F3: these are the schemas the future MCP transport
+# feature (F008) will register. F4 itself does NOT start an MCP
+# server — per ADR-0013 the transport is deferred. F4 ships:
+#   1. These schemas, exercised by contract tests
+#   2. Thin Python delegate implementations under gard/mcp/tools/
+#   3. Tests asserting each delegate returns data byte-identical to
+#      the REST equivalent (modulo correlation_id).
+
+mcp_tools:
+
+  - name: get_readiness_summary
+    description: |
+      Return the estate-wide readiness counters (ready_for_uplift,
+      blocked, not_applicable) and dominant blocker categories,
+      optionally filtered by region/site/platform/vendor. Same shape
+      as the REST summary endpoint.
+    auth: READ_READINESS
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+    output_schema:
+      $ref: "./rest-openapi.yaml#/components/schemas/SummaryResponse"
+    rest_parity:
+      derived_from: "GET /api/v1/readiness/summary"
+      proof: tests/integration/test_us3_readiness_mcp_parity.py::test_summary_parity
+
+  - name: list_blocked_devices
+    description: |
+      Return up to 500 devices currently classified as blocked, with
+      their hostname, platform, and the predicate_kind of their
+      primary blocker. Designed for the daily "which hardware refreshes
+      should I queue up?" question from an AI agent.
+    auth: READ_READINESS
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+        blocker_kind:      {$ref: "./rest-openapi.yaml#/components/schemas/BlockerPredicateKind"}
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, as_of, correlation_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [device_id, hostname, primary_blocker_kind]
+            properties:
+              device_id:            {type: string, format: uuid}
+              hostname:             {type: string}
+              region:               {type: [string, "null"]}
+              site:                 {type: [string, "null"]}
+              platform_family:      {type: [string, "null"]}
+              target_version:       {type: [string, "null"]}
+              observed_version:     {type: [string, "null"]}
+              primary_blocker_kind: {$ref: "./rest-openapi.yaml#/components/schemas/BlockerPredicateKind"}
+              primary_blocker_detail: {type: [string, "null"]}
+        total_returned: {type: integer, minimum: 0}
+        as_of:          {type: string, format: date-time}
+        correlation_id: {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/readiness/devices?state=blocked"
+      proof: tests/integration/test_us3_readiness_mcp_parity.py::test_list_blocked_parity
+
+  - name: explain_blockers
+    description: |
+      Return the full ordered blockers[] array for a single device,
+      with every required and recommended blocker and its citation.
+      The AI agent uses this to compose a ticket or runbook body.
+    auth: READ_READINESS
+    input_schema:
+      type: object
+      additionalProperties: false
+      required: [device_id]
+      properties:
+        device_id: {type: string, format: uuid}
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [device_id, state, blockers, as_of, correlation_id]
+      properties:
+        device_id:        {type: string, format: uuid}
+        hostname:         {type: [string, "null"]}
+        state:            {$ref: "./rest-openapi.yaml#/components/schemas/ReadinessState"}
+        target_version:   {type: [string, "null"]}
+        observed_version: {type: [string, "null"]}
+        blockers:
+          type: array
+          items: {$ref: "./rest-openapi.yaml#/components/schemas/Blocker"}
+        recommended_actions:
+          type: array
+          items: {$ref: "./rest-openapi.yaml#/components/schemas/RecommendedAction"}
+        as_of:          {type: string, format: date-time}
+        correlation_id: {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/devices/{device_id}/readiness"
+      proof: tests/integration/test_us3_readiness_mcp_parity.py::test_explain_blockers_parity
+
+  - name: get_ready_for_uplift_devices
+    description: |
+      Return up to 500 devices currently classified as
+      ready_for_uplift. F5's wave drafter is the primary consumer.
+    auth: READ_READINESS
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region:            {type: string}
+        site:              {type: string}
+        platform_family:   {type: string}
+        vendor_normalized: {type: string}
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+    output_schema:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, as_of, correlation_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [device_id, hostname, target_version, observed_version]
+            properties:
+              device_id:        {type: string, format: uuid}
+              hostname:         {type: string}
+              region:           {type: [string, "null"]}
+              site:             {type: [string, "null"]}
+              platform_family:  {type: [string, "null"]}
+              target_version:   {type: string}
+              observed_version: {type: [string, "null"]}
+        total_returned: {type: integer, minimum: 0}
+        as_of:          {type: string, format: date-time}
+        correlation_id: {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/readiness/devices?state=ready_for_uplift"
+      proof: tests/integration/test_us3_readiness_mcp_parity.py::test_ready_parity

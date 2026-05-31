@@ -133,7 +133,18 @@ Complexity Tracking section and be approved before implementation.
   `/devices/{id}/compliance`, `/compliance/evaluate`), four MCP
   tool delegates (transport still deferred), and a reload-sync hook
   that piggybacks on F2's bounded re-eval.
-- ⏭️ **Next**: F4 — Readiness Signal & Upgrade Plan.
+- ✅ **F4 — Readiness & Prerequisites** shipped on
+  `004-readiness-prerequisites` (PR #4). 3-state readiness taxonomy
+  (`ready_for_uplift` / `blocked` / `not_applicable`) with closed
+  predicate-kind enum spanning F2's 9 prerequisite kinds plus 2
+  synthetic kinds (`missing_upgrade_path`, `missing_observation_field`).
+  Verdict precedence + biconditional rules locked in ADR-0015.
+  Append-only `readiness_evaluations` storage with R-5 idempotency,
+  four REST endpoints (`/readiness/summary`, `/readiness/devices`,
+  `/devices/{id}/readiness`, `/readiness/evaluate`), four MCP tool
+  delegates, and a reload-sync extension that adds prereq-rule-touched
+  devices to F3's existing affected set.
+- ⏭️ **Next**: F5 — Uplift Planning (wave drafting + change windows).
 
 ## Quickstart
 
@@ -175,6 +186,18 @@ After `make seed` you should see:
     r4.bergen state=compliant      drift=evidence_drift secondary=-             actions=request_observation_refresh
     r5.bergen state=compliant      drift=evidence_drift secondary=-             actions=request_observation_refresh
     r3.oslo   state=classified     drift=catalog_drift  secondary=-             actions=define_target
+
+==> F4: estate-wide readiness summary
+    total_outside_target=2 ready_for_uplift=0 blocked=2 not_applicable=3
+    top_blocker_categories:
+      - min_disk_mb                  2
+
+==> F4: per-device readiness verdict
+    r1.oslo        state=blocked            primary=min_disk_mb            rule=iosxr-minimum-disk
+    r2.oslo        state=blocked            primary=missing_observation_field rule=iosxr-minimum-disk
+    r3.oslo        state=not_applicable     primary=-                      rule=-
+    r4.bergen      state=not_applicable     primary=-                      rule=-
+    r5.bergen      state=not_applicable     primary=-                      rule=-
 ```
 
 The `r3.oslo` device shows `classified` + `catalog_drift` (no firmware

@@ -443,10 +443,21 @@ def _reevaluate_compliance_post_reload(
     """
     # Avoid the import cycle: compliance_controller imports the loader
     # transitively, so we import lazily here.
-    from gard.core import compliance_controller, compliance_evaluation_controller
+    from gard.core import (
+        compliance_controller,
+        compliance_evaluation_controller,
+        readiness_evaluation_controller,
+    )
 
     target_deltas = [d for d in report.deltas if d.kind == "target" and d.action != "unchanged"]
     touched_target_ids = {d.entity_id for d in target_deltas}
+
+    # F4 (R-6): prereq rules that changed in this reload contribute set3 —
+    # any device whose facts match the rule's applies_to becomes touched.
+    prereq_deltas = [
+        d for d in report.deltas if d.kind == "prerequisite" and d.action != "unchanged"
+    ]
+    touched_prereq_ids = {d.entity_id for d in prereq_deltas}
 
     # Set 1: devices already in a firmware-derived lifecycle state.
     firmware_states = (
@@ -459,21 +470,37 @@ def _reevaluate_compliance_post_reload(
         session.scalars(select(Device.id).where(Device.lifecycle_state.in_(firmware_states)))
     )
 
-    # Set 2: devices whose facts match any touched target's scope.
-    # Without a real selector-to-SQL compiler we fetch the touched
-    # targets and evaluate selectors in Python. The N is bounded by
-    # |touched_targets| * |devices| which is small at F2 scale.
+    # Sets 2 + 3 both walk the device list once and match against the
+    # touched targets (set 2) and touched prereq rules (set 3). We share
+    # the device fetch + facts construction so the scan is single-pass.
     set2: set[Any] = set()
-    if touched_target_ids:
+    set3: set[Any] = set()
+    if touched_target_ids or touched_prereq_ids:
         from gard.core.scope_selector import evaluate as evaluate_selector
+        from gard.models import FirmwarePrerequisiteRule
 
-        touched_targets = list(
-            session.scalars(select(FirmwareTarget).where(FirmwareTarget.id.in_(touched_target_ids)))
+        touched_targets = (
+            list(
+                session.scalars(
+                    select(FirmwareTarget).where(FirmwareTarget.id.in_(touched_target_ids))
+                )
+            )
+            if touched_target_ids
+            else []
+        )
+        touched_prereqs = (
+            list(
+                session.scalars(
+                    select(FirmwarePrerequisiteRule).where(
+                        FirmwarePrerequisiteRule.id.in_(touched_prereq_ids)
+                    )
+                )
+            )
+            if touched_prereq_ids
+            else []
         )
         devices = list(session.scalars(select(Device)))
         for device in devices:
-            if device.id in set2:
-                continue
             facts = {
                 "vendor_normalized": device.vendor_normalized,
                 "platform_family": device.platform_family,
@@ -483,12 +510,18 @@ def _reevaluate_compliance_post_reload(
                 "hardware_revision": device.hardware_revision,
                 "lifecycle_state": device.lifecycle_state.value,
             }
-            for t in touched_targets:
-                if evaluate_selector(t.scope_selector, facts).matched:
-                    set2.add(device.id)
-                    break
+            if device.id not in set2:
+                for t in touched_targets:
+                    if evaluate_selector(t.scope_selector, facts).matched:
+                        set2.add(device.id)
+                        break
+            if device.id not in set3:
+                for r in touched_prereqs:
+                    if evaluate_selector(r.applies_to, facts).matched:
+                        set3.add(device.id)
+                        break
 
-    affected = set1 | set2
+    affected = set1 | set2 | set3
     if not affected:
         return 0
 
@@ -519,12 +552,28 @@ def _reevaluate_compliance_post_reload(
                 device_id=str(device_id),
                 error=str(exc),
             )
+        # F4 controller derives readiness from F3's latest row. Same
+        # defensive try/except — a F4 bug must not break the F2 reload.
+        try:
+            readiness_evaluation_controller.evaluate(
+                session=session,
+                audit_session=audit_session,
+                device_id=device_id,
+                actor=actor,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            _log.warning(
+                "firmware_catalog.f4_post_reload_failed",
+                device_id=str(device_id),
+                error=str(exc),
+            )
         count += 1
 
     _log.info(
         "firmware_catalog.post_reload_reevaluated",
         devices=count,
         touched_targets=len(touched_target_ids),
+        touched_prereqs=len(touched_prereq_ids),
     )
     return count
 

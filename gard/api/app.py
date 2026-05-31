@@ -167,6 +167,8 @@ _PHASE3_ROUTERS: tuple[str, ...] = (
     "firmware_packages",
     # F3 (003-compliance-drift-evaluation):
     "compliance",
+    # F4 (004-readiness-prerequisites):
+    "readiness",
 )
 
 

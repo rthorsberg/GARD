@@ -76,6 +76,7 @@ def engine(_migrated_db: str) -> Iterator[Engine]:
 
 
 _DATA_TABLES = (
+    "readiness_evaluations",
     "compliance_evaluations",
     "manual_mappings",
     "device_observations",

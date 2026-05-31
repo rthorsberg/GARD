@@ -50,6 +50,14 @@ class Permission:
     READ_COMPLIANCE = "compliance.read"
     RUN_COMPLIANCE_EVAL = "compliance.evaluate"
 
+    # ---- F4: readiness & prerequisites -----------------------------------
+    # READ_READINESS gates the three GET endpoints under /api/v1/readiness
+    # and /devices/{id}/readiness. RUN_READINESS_EVAL gates the bounded
+    # POST /readiness/evaluate trigger. Same admin-grade reasoning as
+    # F3's RUN_COMPLIANCE_EVAL — unbounded calls would pin Postgres.
+    READ_READINESS = "readiness.read"
+    RUN_READINESS_EVAL = "readiness.evaluate"
+
 
 # fmt: off
 _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
@@ -62,6 +70,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_RULE,
         Permission.READ_FIRMWARE_CATALOG,
         Permission.READ_COMPLIANCE,
+        Permission.READ_READINESS,
     }),
     Role.lifecycle_manager: frozenset({
         Permission.READ_DEVICE,
@@ -78,6 +87,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.MANAGE_FIRMWARE_BLOB,
         Permission.READ_COMPLIANCE,
         Permission.RUN_COMPLIANCE_EVAL,
+        Permission.READ_READINESS,
+        Permission.RUN_READINESS_EVAL,
     }),
     Role.mcp_client: frozenset({
         Permission.READ_DEVICE,
@@ -87,6 +98,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.INVOKE_MCP_TOOL,
         Permission.READ_FIRMWARE_CATALOG,
         Permission.READ_COMPLIANCE,
+        Permission.READ_READINESS,
     }),
     Role.system_admin: frozenset({
         Permission.READ_DEVICE,
@@ -106,6 +118,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.MANAGE_FIRMWARE_BLOB,
         Permission.READ_COMPLIANCE,
         Permission.RUN_COMPLIANCE_EVAL,
+        Permission.READ_READINESS,
+        Permission.RUN_READINESS_EVAL,
     }),
 }
 # fmt: on

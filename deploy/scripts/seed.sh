@@ -216,6 +216,43 @@ for it in r['items']:
     print(f'    {it[\"hostname\"]:<14} state={env[\"state\"]:<14} drift={drift:<16} secondary={secondary:<14} actions={actions}')
 " 2>/dev/null || dim "    (skipped: devices listing endpoint not reachable)"
 
+bold "==> F4: triggering bounded readiness re-eval (scope=all)"
+EVAL_RES=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"scope_selector":{}}' \
+  "$API_BASE/api/v1/readiness/evaluate")
+echo "$EVAL_RES" | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    requested={r[\"requested_count\"]} evaluated={r[\"evaluated_count\"]} unchanged={r[\"unchanged_count\"]} not_applicable={r[\"not_applicable_count\"]}')
+print(f'    correlation_id={r[\"correlation_id\"]}')
+" 2>/dev/null || dim "    (skipped: readiness/evaluate endpoint not reachable)"
+
+bold "==> F4: estate-wide readiness summary"
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/readiness/summary" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+print(f'    total_outside_target={r[\"total_outside_target\"]} ready_for_uplift={r[\"ready_for_uplift_count\"]} blocked={r[\"blocked_count\"]} not_applicable={r[\"not_applicable_count\"]}')
+if r['top_blocker_categories']:
+    print('    top_blocker_categories:')
+    for c in r['top_blocker_categories']:
+        print(f'      - {c[\"predicate_kind\"]:<28} {c[\"count\"]}')
+" 2>/dev/null || dim "    (skipped: readiness/summary endpoint not reachable)"
+
+bold "==> F4: per-device readiness verdict"
+curl -sS -H "Authorization: Bearer $TOKEN" "$API_BASE/api/v1/readiness/devices?limit=200" \
+  | python3 -c "
+import json, sys
+r = json.loads(sys.stdin.read())
+for it in r['items']:
+    env = it['envelope']
+    blockers = env.get('blockers') or []
+    primary_kind = blockers[0]['predicate_kind'] if blockers else '-'
+    primary_rule = blockers[0].get('rule_name') or '-' if blockers else '-'
+    print(f'    {it[\"hostname\"]:<14} state={env[\"state\"]:<18} primary={primary_kind:<28} rule={primary_rule}')
+" 2>/dev/null || dim "    (skipped: readiness/devices listing endpoint not reachable)"
+
 bold "==> Done."
 echo
 echo "Token (also at .gard/token.jwt):"
