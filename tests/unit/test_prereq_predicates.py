@@ -14,7 +14,6 @@ from types import SimpleNamespace
 from typing import Any
 
 from gard.core import prereq_predicates
-from gard.core.envelope import Blocker
 from gard.models._enums import LifecycleState
 
 

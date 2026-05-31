@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from gard.core import prereq_predicates
 from gard.core.envelope import Blocker, BlockerPredicateKind
 
