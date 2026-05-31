@@ -281,7 +281,7 @@ if [[ -n "$PLAN_ID" ]]; then
   F5_WAVE=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
     -H "content-type: application/json" \
     -H "Idempotency-Key: seed-f5-wave" \
-    -d "{\"name\":\"seed-demo-wave\",\"target_version\":\"7.8.1\",\"target_platform_family\":\"iosxr\",\"scope_selector\":{\"site\":\"bergen-1\"},\"mode\":\"skip_ineligible\",\"change_window_start\":\"$CW_START\",\"change_window_end\":\"$CW_END\"}" \
+    -d "{\"name\":\"seed-demo-wave\",\"target_version\":\"23.2R1\",\"target_platform_family\":\"junos\",\"scope_selector\":{\"site_in\":[\"oslo-1\"]},\"mode\":\"skip_ineligible\",\"change_window_start\":\"$CW_START\",\"change_window_end\":\"$CW_END\"}" \
     "$API_BASE/api/v1/uplift/plans/$PLAN_ID/waves" 2>/dev/null || echo '{}')
   WAVE_ID=$(echo "$F5_WAVE" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('id',''))" 2>/dev/null || echo "")
   if [[ -n "$WAVE_ID" ]]; then

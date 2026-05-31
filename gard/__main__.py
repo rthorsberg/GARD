@@ -46,7 +46,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     issue.add_argument(
         "--role",
         required=True,
-        choices=["viewer", "lifecycle_manager", "mcp_client", "system_admin"],
+        choices=[
+            "viewer",
+            "lifecycle_manager",
+            "change_approver",
+            "mcp_client",
+            "system_admin",
+        ],
     )
     issue.add_argument("--ttl-seconds", type=int, default=None)
 
