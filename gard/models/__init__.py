@@ -47,6 +47,7 @@ def utcnow() -> _dt.datetime:
 # Import models so SQLAlchemy registers them on Base.metadata.
 from gard.models.api_token import ApiToken  # noqa: E402
 from gard.models.audit_event import AuditChainHead, AuditEvent  # noqa: E402
+from gard.models.compliance_evaluation import ComplianceEvaluation  # noqa: E402
 from gard.models.device import Device  # noqa: E402
 from gard.models.firmware_package import FirmwarePackage  # noqa: E402
 from gard.models.firmware_prerequisite import (  # noqa: E402
@@ -67,6 +68,7 @@ __all__ = [
     "AuditChainHead",
     "AuditEvent",
     "Base",
+    "ComplianceEvaluation",
     "Device",
     "DeviceObservation",
     "FirmwarePackage",

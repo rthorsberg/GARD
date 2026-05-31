@@ -111,6 +111,37 @@ class Settings(BaseSettings):
         description="Per-upload size cap for firmware blobs (FR-031).",
     )
 
+    # --- F3: compliance & drift evaluation ------------------------------
+    discovery_stale_days: int = Field(
+        default=30,
+        ge=1,
+        description=(
+            "After this many days without a fresh DeviceObservation the "
+            "drift engine surfaces `discovery_drift` (kind="
+            "stale_observation). 0 is rejected — would mark every device "
+            "stale immediately."
+        ),
+    )
+    evidence_stale_days: int = Field(
+        default=90,
+        ge=1,
+        description=(
+            "Compliant devices without a `re_evaluation` LifecycleEvidence "
+            "row within this window surface `evidence_drift`. F3 v1 has no "
+            "validation-evidence emitter so this rule is intentionally "
+            "narrow — the threshold matters for F4/F6 forward."
+        ),
+    )
+    compliance_evaluate_max_batch: int = Field(
+        default=5000,
+        ge=1,
+        description=(
+            "Hard cap on the device set resolved by POST /api/v1/compliance/"
+            "evaluate. Larger requested sets are refused with 413 "
+            "EVALUATION_TOO_LARGE (FR-014)."
+        ),
+    )
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_weak_prod_secret(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]

@@ -443,7 +443,7 @@ def _reevaluate_compliance_post_reload(
     """
     # Avoid the import cycle: compliance_controller imports the loader
     # transitively, so we import lazily here.
-    from gard.core import compliance_controller
+    from gard.core import compliance_controller, compliance_evaluation_controller
 
     target_deltas = [d for d in report.deltas if d.kind == "target" and d.action != "unchanged"]
     touched_target_ids = {d.entity_id for d in target_deltas}
@@ -494,12 +494,31 @@ def _reevaluate_compliance_post_reload(
 
     count = 0
     for device_id in affected:
+        # F2 controller updates lifecycle_state + emits its own audit.
         compliance_controller.evaluate(
             session=session,
             audit_session=audit_session,
             device_id=device_id,
             actor=actor,
         )
+        # F3 controller classifies drift + persists ComplianceEvaluation
+        # rows. Idempotent on unchanged inputs — silent for devices whose
+        # F3 verdict didn't change. Wrapped in try so an F3-side failure
+        # never breaks the F2 reload pipeline (per ADR-0011 §8: serve
+        # last-known state rather than abort).
+        try:
+            compliance_evaluation_controller.evaluate(
+                session=session,
+                audit_session=audit_session,
+                device_id=device_id,
+                actor=actor,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            _log.warning(
+                "firmware_catalog.f3_post_reload_failed",
+                device_id=str(device_id),
+                error=str(exc),
+            )
         count += 1
 
     _log.info(
