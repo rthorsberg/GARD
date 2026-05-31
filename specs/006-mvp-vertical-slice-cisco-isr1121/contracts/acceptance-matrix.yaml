@@ -1,0 +1,64 @@
+# MVP acceptance criteria → automated assertion matrix
+# F6 vertical slice — binding for test_mvp_vertical_slice_isr1121.py
+
+schema_version: 1
+feature: mvp-vertical-slice-cisco-isr1121
+source: gard-speckit-start/specs/04-mvp-scope.md
+
+criteria:
+  - id: MVP-01
+    criterion: "A CSV can be imported with valid and invalid rows."
+    test: test_mvp_vertical_slice_isr1121.py::TestImport::test_mixed_csv_import
+    assertion: import job completes; rows_rejected > 0; rows_accepted > 0
+
+  - id: MVP-02
+    criterion: "GARD produces import summary and error report."
+    test: test_mvp_vertical_slice_isr1121.py::TestImport::test_import_summary_invariant
+    assertion: rows_total == accepted + rejected + duplicate + manual_review
+
+  - id: MVP-03
+    criterion: "Devices are normalized to canonical vendor/model/platform entities."
+    test: test_mvp_vertical_slice_isr1121.py::TestNormalize::test_isr1121_normalization
+    assertion: vendor_normalized=Cisco, model_normalized=ISR1121, platform=ios
+
+  - id: MVP-04
+    criterion: "Target firmware can be defined for the reference model."
+    test: test_mvp_vertical_slice_isr1121.py::TestCatalog::test_isr1121_target_loaded
+    assertion: FirmwareTarget for ISR1121 with target_version=17.12.4
+
+  - id: MVP-05
+    criterion: "Devices classified as compliant, outside target, unknown, blocked or ready."
+    test: test_mvp_vertical_slice_isr1121.py::TestEvaluation::test_isr1121_state_taxonomy
+    assertion: at least outside_target and ready_for_uplift (or blocked) present
+
+  - id: MVP-06
+    criterion: "GARD can produce a dry-run uplift plan."
+    test: test_mvp_vertical_slice_isr1121.py::TestUplift::test_create_plan
+    assertion: POST /uplift/plans returns plan id
+
+  - id: MVP-07
+    criterion: "GARD can create a draft wave."
+    test: test_mvp_vertical_slice_isr1121.py::TestUplift::test_draft_wave
+    assertion: wave state=draft, device_count >= 1
+
+  - id: MVP-08
+    criterion: "MCP can answer how many Cisco ISR1121 are outside target version."
+    test: test_mvp_vertical_slice_isr1121.py::TestMcpDelegates::test_count_outside_target_isr1121
+    assertion: delegate count matches REST compliance filter count
+
+  - id: MVP-09
+    criterion: "Audit events are recorded."
+    test: test_mvp_vertical_slice_isr1121.py::TestAudit::test_golden_device_audit_chain
+    assertion: audit rows span import through approval
+
+  - id: MVP-10
+    criterion: "LifecycleEvidence records are created for import/evaluation/planning."
+    test: test_mvp_vertical_slice_isr1121.py::TestAudit::test_lifecycle_evidence_emitted
+    assertion: evidence rows for import and evaluation phases
+
+golden_path:
+  device_hostname: r-osl-001
+  lifecycle: imported → classified → outside_target → ready_for_uplift → approval_pending → approved
+  sod:
+    drafter_role: lifecycle_manager
+    approver_role: change_approver

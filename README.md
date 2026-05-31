@@ -144,13 +144,17 @@ Complexity Tracking section and be approved before implementation.
   `/devices/{id}/readiness`, `/readiness/evaluate`), four MCP tool
   delegates, and a reload-sync extension that adds prereq-rule-touched
   devices to F3's existing affected set.
-- 🚧 **F5 — Uplift Planning & Waves** on `005-uplift-planning-waves`
-  (PR #5, in review). Turns F4's `ready_for_uplift` pool into
-  reviewable change packets: `UpliftPlan` + `UpliftWave` with
-  separation-of-duties approval (ADR-0016), `Exception` escape hatch
-  for blocked devices, lazy exception expiry wired into F4 evaluate,
-  14 REST endpoints, and six read-shaped MCP delegates.
-- ⏭️ **Next**: F6 — MVP vertical slice (Cisco ISR1121 end-to-end proof).
+- ✅ **F5 — Uplift Planning & Waves** shipped on `main` (PR #5).
+  Turns F4's `ready_for_uplift` pool into reviewable change packets:
+  `UpliftPlan` + `UpliftWave` with separation-of-duties approval
+  (ADR-0016), `Exception` escape hatch for blocked devices, lazy
+  exception expiry wired into F4 evaluate, uplift REST surface, and
+  six read-shaped MCP delegates.
+- 🚧 **F6 — MVP Vertical Slice Validation** on
+  `006-mvp-vertical-slice-cisco-isr1121` (design phase). End-to-end
+  Cisco ISR1121 proof: integration tests, catalog/fixture data, and
+  operator runbook — validates F1–F5, no new product code.
+- ⏭️ **Next after F6**: F7 — NetBox integration (read-only).
 
 ## Quickstart
 
