@@ -50,6 +50,7 @@ def _device(**overrides: Any) -> SimpleNamespace:
         "ram_mb": 2048,
         "disk_mb": 8192,
         "licenses": ["base"],
+        "tags": None,
         "lifecycle_state": LifecycleState.outside_target,
     }
     base.update(overrides)
@@ -244,16 +245,38 @@ def test_region_in_silent_when_in_set() -> None:
     assert prereq_predicates.eval_region_in(rule, _device(region="oslo"), _obs()) is None
 
 
-# ---- tagged_with (deferred — always recommended) -------------------------
+# ---- tagged_with (F7 — NetBox tag source) --------------------------------
 
 
-def test_tagged_with_emits_recommended_advisory() -> None:
+def test_tagged_with_defers_when_tags_unknown() -> None:
     rule = _rule(
-        name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["pre-uplift-review"]}
+        name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]}
     )
     b = prereq_predicates.eval_tagged_with(rule, _device(), _obs())
     assert b is not None
     assert b.severity == "recommended"
+    assert b.observed == {"tags": None, "tags_known": False}
+
+
+def test_tagged_with_passes_when_tags_present() -> None:
+    rule = _rule(
+        name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]}
+    )
+    dev = _device(tags=["edge", "lab"])
+    assert prereq_predicates.eval_tagged_with(rule, dev, _obs()) is None
+
+
+def test_tagged_with_blocks_when_tag_missing_after_sync() -> None:
+    rule = _rule(
+        name="tw",
+        predicate_kind="tagged_with",
+        predicate_args={"tags": ["edge"]},
+        severity="required",
+    )
+    dev = _device(tags=[])
+    b = prereq_predicates.eval_tagged_with(rule, dev, _obs())
+    assert b is not None
+    assert b.severity == "required"
     assert b.predicate_kind == "tagged_with"
 
 

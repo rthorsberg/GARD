@@ -601,7 +601,7 @@ def _load_prerequisites(session: Session, root: Path, report: LoadReport) -> Non
         predicate = doc["predicate"]
         predicate_kind = predicate["kind"]
         predicate_args = {k: v for k, v in predicate.items() if k != "kind"}
-        evaluable = predicate_kind != "tagged_with"  # FR-024
+        evaluable = True
         severity = doc.get("severity", "required")
 
         existing = session.scalar(

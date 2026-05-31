@@ -160,6 +160,7 @@ def _device_facts(device: Device) -> dict[str, object]:
         "role": device.role,
         "hardware_revision": device.hardware_revision,
         "lifecycle_state": device.lifecycle_state.value,
+        "tags": device.tags,
     }
 
 

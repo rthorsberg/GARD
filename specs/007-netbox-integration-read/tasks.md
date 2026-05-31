@@ -38,9 +38,9 @@ Status: `[ ]` pending · `[x]` done
 
 ## Phase 4 — US2 tagged_with (slice 7c)
 
-- [ ] **T024** [US2] Implement `eval_tagged_with` against `Device.tags`
-- [ ] **T025** [US2] Integration test: tag sync + readiness eval
-- [ ] **T026** [US2] Remove `predicate_deferred` for synced tagged devices
+- [x] **T024** [US2] Implement `eval_tagged_with` against `Device.tags`
+- [x] **T025** [US2] Integration test: tag sync + readiness eval
+- [x] **T026** [US2] Remove `predicate_deferred` for synced tagged devices
 
 ## Phase 5 — US4 MCP (slice 7d)
 

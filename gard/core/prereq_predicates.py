@@ -343,24 +343,46 @@ def eval_tagged_with(
     device: Device,
     observation: DeviceObservation | None,
 ) -> Blocker | None:
-    """Deferred per F2 / Constitution VII — surfaces as advisory.
+    """Evaluate NetBox-sourced tag slugs on ``Device.tags`` (F7).
 
-    v1 cannot evaluate tags (no Device.tags column). We emit a
-    `recommended`-severity blocker noting deferral so the verdict does
-    not flip to `blocked` purely on tag input. F2's scope_selector
-    handles the same deferral for its scope keys.
+    When ``Device.tags`` is ``None`` the tag source has never been
+    populated (CSV-only device, no NetBox sync yet). Surfaced as a
+    ``recommended`` advisory so readiness is not hard-blocked on missing
+    infrastructure data. After sync, ``tags`` is a list (possibly empty)
+    and the rule evaluates with its configured severity.
     """
-    tags = list(rule.predicate_args.get("tags", []))
+    raw = rule.predicate_args.get("tags", [])
+    required = [str(t).strip() for t in raw if str(t).strip()] if isinstance(raw, list) else []
+    if not required:
+        return None
+
+    device_tags = device.tags
+    if device_tags is None:
+        return _blocker(
+            rule,
+            "tagged_with",
+            required={"tags": required},
+            observed={"tags": None, "tags_known": False},
+            detail=(
+                f"rule {rule.name!r} depends on device tags which are not "
+                f"populated yet; sync from NetBox first"
+            ),
+            severity_override="recommended",
+        )
+
+    have = {t.lower() for t in device_tags}
+    missing = [t for t in required if t.lower() not in have]
+    if not missing:
+        return None
+
     return _blocker(
         rule,
         "tagged_with",
-        required={"tags": tags},
-        observed={"tags_known": False},
+        required={"tags": required},
+        observed={"tags": list(device_tags), "missing": missing},
         detail=(
-            f"rule {rule.name!r} depends on device tags which v1 cannot "
-            f"evaluate (Constitution VII deferral); surfacing as advisory"
+            f"device missing required tag(s) {missing!r} (have {list(device_tags)!r})"
         ),
-        severity_override="recommended",
     )
 
 

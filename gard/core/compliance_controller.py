@@ -81,6 +81,7 @@ def _facts_for(device: Device) -> dict[str, Any]:
         "role": device.role,
         "hardware_revision": device.hardware_revision,
         "lifecycle_state": device.lifecycle_state.value,
+        "tags": device.tags,
     }
 
 
