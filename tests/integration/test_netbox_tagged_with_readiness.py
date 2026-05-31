@@ -82,7 +82,11 @@ def test_tagged_with_passes_after_netbox_sync(client, db_session, project_root) 
     assert before["state"] == "ready_for_uplift"
     blocker_kinds = {b["predicate_kind"] for b in before["blockers"]}
     assert "tagged_with" in blocker_kinds
-    assert all(b["severity"] == "recommended" for b in before["blockers"] if b["predicate_kind"] == "tagged_with")
+    assert all(
+        b["severity"] == "recommended"
+        for b in before["blockers"]
+        if b["predicate_kind"] == "tagged_with"
+    )
 
     fake = FakeNetboxClient(
         [
@@ -137,8 +141,16 @@ def test_tagged_with_blocks_when_tag_removed_on_resync(client, db_session, proje
         model_raw="ISR1121-8P",
         tags=("edge",),
     )
-    with patch("gard.core.netbox_sync_controller.client_from_settings", return_value=FakeNetboxClient([record])):
-        assert client.post("/api/v1/integrations/netbox/sync", headers={"Authorization": f"Bearer {jwt}"}).status_code == 200
+    with patch(
+        "gard.core.netbox_sync_controller.client_from_settings",
+        return_value=FakeNetboxClient([record]),
+    ):
+        assert (
+            client.post(
+                "/api/v1/integrations/netbox/sync", headers={"Authorization": f"Bearer {jwt}"}
+            ).status_code
+            == 200
+        )
 
     db_session.expire_all()
     assert db_session.get(Device, device.id).tags == ["edge"]
@@ -154,8 +166,16 @@ def test_tagged_with_blocks_when_tag_removed_on_resync(client, db_session, proje
         model_raw="ISR1121-8P",
         tags=(),
     )
-    with patch("gard.core.netbox_sync_controller.client_from_settings", return_value=FakeNetboxClient([record_no_tag])):
-        assert client.post("/api/v1/integrations/netbox/sync", headers={"Authorization": f"Bearer {jwt}"}).status_code == 200
+    with patch(
+        "gard.core.netbox_sync_controller.client_from_settings",
+        return_value=FakeNetboxClient([record_no_tag]),
+    ):
+        assert (
+            client.post(
+                "/api/v1/integrations/netbox/sync", headers={"Authorization": f"Bearer {jwt}"}
+            ).status_code
+            == 200
+        )
 
     db_session.expire_all()
     assert db_session.get(Device, device.id).tags == []

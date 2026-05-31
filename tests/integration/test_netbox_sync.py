@@ -28,7 +28,9 @@ def _token(db_session, *, role: Role = Role.lifecycle_manager) -> str:
     return issued.jwt
 
 
-def _import_one_device(client, jwt: str, *, serial: str = "FOC123456", hostname: str = "r-osl-001") -> None:
+def _import_one_device(
+    client, jwt: str, *, serial: str = "FOC123456", hostname: str = "r-osl-001"
+) -> None:
     body = csv_body([csv_row(hostname=hostname, serial_number=serial)])
     r = client.post(
         "/api/v1/imports/devices/csv",
@@ -156,7 +158,9 @@ def test_sync_netbox_unreachable_rollback(client, db_session, project_root) -> N
         def list_devices(self) -> list[NetboxDeviceRecord]:
             raise NetboxUnreachable("connection refused")
 
-    with patch("gard.core.netbox_sync_controller.client_from_settings", return_value=BrokenClient()):
+    with patch(
+        "gard.core.netbox_sync_controller.client_from_settings", return_value=BrokenClient()
+    ):
         r = client.post(
             "/api/v1/integrations/netbox/sync",
             headers={"Authorization": f"Bearer {jwt}"},
@@ -200,7 +204,9 @@ def test_sync_emits_audit_and_evidence(client, db_session) -> None:
         )
     assert r.status_code == 200, r.text
 
-    actions = list(db_session.scalars(select(AuditEvent.action).where(AuditEvent.action.like("netbox.sync.%"))))
+    actions = list(
+        db_session.scalars(select(AuditEvent.action).where(AuditEvent.action.like("netbox.sync.%")))
+    )
     assert "netbox.sync.started" in actions
     assert "netbox.sync.completed" in actions
 

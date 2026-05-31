@@ -29,9 +29,7 @@ class NetboxSyncRun(Base):
     started_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, server_default=func.now()
     )
-    completed_at: Mapped[dt.datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     correlation_id: Mapped[str] = mapped_column(String, nullable=False)
     matched_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

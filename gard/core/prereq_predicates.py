@@ -380,9 +380,7 @@ def eval_tagged_with(
         "tagged_with",
         required={"tags": required},
         observed={"tags": list(device_tags), "missing": missing},
-        detail=(
-            f"device missing required tag(s) {missing!r} (have {list(device_tags)!r})"
-        ),
+        detail=(f"device missing required tag(s) {missing!r} (have {list(device_tags)!r})"),
     )
 
 

@@ -249,9 +249,7 @@ def test_region_in_silent_when_in_set() -> None:
 
 
 def test_tagged_with_defers_when_tags_unknown() -> None:
-    rule = _rule(
-        name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]}
-    )
+    rule = _rule(name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]})
     b = prereq_predicates.eval_tagged_with(rule, _device(), _obs())
     assert b is not None
     assert b.severity == "recommended"
@@ -259,9 +257,7 @@ def test_tagged_with_defers_when_tags_unknown() -> None:
 
 
 def test_tagged_with_passes_when_tags_present() -> None:
-    rule = _rule(
-        name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]}
-    )
+    rule = _rule(name="tw", predicate_kind="tagged_with", predicate_args={"tags": ["edge"]})
     dev = _device(tags=["edge", "lab"])
     assert prereq_predicates.eval_tagged_with(rule, dev, _obs()) is None
 

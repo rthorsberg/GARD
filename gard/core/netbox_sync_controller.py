@@ -104,9 +104,7 @@ def _check_netbox_serial_duplicates(records: list[NetboxDeviceRecord]) -> None:
 
 
 def _find_gard_device(session: Session, record: NetboxDeviceRecord) -> Device | None:
-    by_nb = session.scalar(
-        select(Device).where(Device.netbox_device_id == record.id)
-    )
+    by_nb = session.scalar(select(Device).where(Device.netbox_device_id == record.id))
     if by_nb is not None:
         return by_nb
     return _find_by_identity(session, _identity_from_netbox(record))
@@ -316,12 +314,18 @@ class NetboxSummary:
 
 
 def get_summary(session: Session) -> NetboxSummary:
-    netbox_linked = session.scalar(
-        select(func.count()).select_from(Device).where(Device.netbox_device_id.is_not(None))
-    ) or 0
-    csv_only = session.scalar(
-        select(func.count()).select_from(Device).where(Device.netbox_device_id.is_(None))
-    ) or 0
+    netbox_linked = (
+        session.scalar(
+            select(func.count()).select_from(Device).where(Device.netbox_device_id.is_not(None))
+        )
+        or 0
+    )
+    csv_only = (
+        session.scalar(
+            select(func.count()).select_from(Device).where(Device.netbox_device_id.is_(None))
+        )
+        or 0
+    )
     last_run = session.scalar(
         select(NetboxSyncRun)
         .where(NetboxSyncRun.status == NetboxSyncRunStatus.completed)
