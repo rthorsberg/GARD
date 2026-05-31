@@ -1,0 +1,306 @@
+openapi: 3.1.0
+info:
+  title: GARD F4 — Readiness & Prerequisites API
+  version: "1.0.0"
+  description: |
+    Read-only operator surface for estate-wide readiness triage and
+    per-device blocker explanation. Plus one bounded trigger endpoint
+    for on-demand re-evaluation. F4 never pushes state to any
+    device — the lifecycle_state writes are local to the F4 pipeline.
+
+    All paths require JWT auth (F1 ADR-0008). RBAC permissions:
+      - READ_READINESS for the three GET endpoints
+      - RUN_READINESS_EVAL for POST /readiness/evaluate
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /api/v1/readiness/summary:
+    get:
+      tags: [readiness]
+      summary: Estate-wide readiness summary
+      description: |
+        Returns counts of devices in each readiness state plus the
+        dominant blocker categories. Derived from the latest persisted
+        `ReadinessEvaluation` row per device.
+      operationId: getReadinessSummary
+      parameters:
+        - {in: query, name: region,            schema: {type: string}, required: false}
+        - {in: query, name: site,              schema: {type: string}, required: false}
+        - {in: query, name: platform_family,   schema: {type: string}, required: false}
+        - {in: query, name: vendor_normalized, schema: {type: string}, required: false}
+      responses:
+        "200":
+          description: Readiness summary
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SummaryResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /api/v1/readiness/devices:
+    get:
+      tags: [readiness]
+      summary: Paginated devices + latest readiness envelope
+      operationId: listReadinessDevices
+      parameters:
+        - {in: query, name: state,
+           schema: {$ref: "#/components/schemas/ReadinessState"}, required: false}
+        - {in: query, name: blocker_kind,
+           schema: {$ref: "#/components/schemas/BlockerPredicateKind"}, required: false}
+        - {in: query, name: region,            schema: {type: string}, required: false}
+        - {in: query, name: site,              schema: {type: string}, required: false}
+        - {in: query, name: platform_family,   schema: {type: string}, required: false}
+        - {in: query, name: vendor_normalized, schema: {type: string}, required: false}
+        - {in: query, name: limit,
+           schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
+        - {in: query, name: page_token,        schema: {type: string}, required: false}
+      responses:
+        "200":
+          description: Page of device-with-readiness-envelope rows
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ReadinessDeviceList"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /api/v1/devices/{device_id}/readiness:
+    get:
+      tags: [readiness]
+      summary: Full explainable readiness envelope for one device
+      operationId: getDeviceReadiness
+      parameters:
+        - {in: path, name: device_id,
+           required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Readiness envelope
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ReadinessEnvelope"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409":
+          description: READINESS_INPUT_STALE — F3 compliance row is older than threshold
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope"}
+
+  /api/v1/readiness/evaluate:
+    post:
+      tags: [readiness]
+      summary: Trigger bounded re-evaluation
+      description: |
+        Bounded by `GARD_COMPLIANCE_EVALUATE_MAX_BATCH` (default 5,000).
+        Refuses larger sets with 413. Body MUST contain EXACTLY ONE of
+        `device_ids` or `scope_selector`.
+      operationId: triggerReadinessEvaluate
+      security:
+        - bearerAuth: [RUN_READINESS_EVAL]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/EvaluateRequest"}
+      responses:
+        "200":
+          description: Evaluation completed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EvaluateResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "413":
+          description: EVALUATION_TOO_LARGE — resolved set exceeds cap
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope"}
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized: {description: invalid or missing token,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    Forbidden:    {description: token lacks required permission,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    NotFound:     {description: resource not found,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+    BadRequest:   {description: invalid request body or query,
+                   content: {application/json: {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}}
+
+  schemas:
+
+    ReadinessState:
+      type: string
+      enum: [ready_for_uplift, blocked, not_applicable]
+
+    BlockerSeverity:
+      type: string
+      enum: [required, recommended]
+
+    BlockerPredicateKind:
+      type: string
+      enum: [min_ram_mb, min_disk_mb, min_current_version,
+             hardware_revision_in, license_present,
+             intermediate_version_required, not_in_state,
+             region_in, tagged_with,
+             missing_upgrade_path, missing_observation_field]
+
+    Blocker:
+      type: object
+      additionalProperties: false
+      required: [predicate_kind, severity, detail]
+      properties:
+        rule_id:        {type: [string, "null"], format: uuid}
+        rule_name:      {type: [string, "null"]}
+        predicate_kind: {$ref: "#/components/schemas/BlockerPredicateKind"}
+        severity:       {$ref: "#/components/schemas/BlockerSeverity"}
+        required:       {type: [object, "null"]}
+        observed:       {type: [object, "null"]}
+        detail:         {type: string}
+
+    RecommendedActionKind:
+      type: string
+      enum: [upgrade_path_query, define_target, define_upgrade_path,
+             upload_firmware_package, trigger_discovery,
+             request_observation_refresh, escalate_to_catalog_owner,
+             acknowledge_exception,
+             schedule_uplift_wave, hardware_refresh,
+             license_acquire, firmware_intermediate_step,
+             import_observation]
+
+    RecommendedAction:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:                       {$ref: "#/components/schemas/RecommendedActionKind"}
+        target_version:             {type: [string, "null"]}
+        target_platform_family:     {type: [string, "null"]}
+        target_device_id:           {type: [string, "null"]}
+        target_observation_id:      {type: [string, "null"]}
+        target_firmware_target_id:  {type: [string, "null"]}
+        requires:                   {type: array, items: {type: string}}
+        detail:                     {type: [string, "null"]}
+
+    ReadinessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [state, summary, blockers, recommended_actions,
+                 upgrade_path_exists, applicable_rules_count,
+                 confidence, evaluated_at, correlation_id]
+      properties:
+        state:                  {$ref: "#/components/schemas/ReadinessState"}
+        summary:                {type: string}
+        target_version:         {type: [string, "null"]}
+        observed_version:       {type: [string, "null"]}
+        upgrade_path_exists:    {type: boolean}
+        applicable_rules_count: {type: integer, minimum: 0}
+        blockers:               {type: array,
+                                 items: {$ref: "#/components/schemas/Blocker"}}
+        recommended_actions:    {type: array,
+                                 items: {$ref: "#/components/schemas/RecommendedAction"}}
+        compliance_evaluation_ref: {type: [string, "null"], format: uuid}
+        confidence:             {type: number, minimum: 0, maximum: 1}
+        evaluation_id:          {type: [string, "null"], format: uuid}
+        evaluated_at:           {type: string, format: date-time}
+        correlation_id:         {type: string}
+
+    SummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [total_outside_target, ready_for_uplift_count,
+                 blocked_count, not_applicable_count,
+                 top_blocker_categories, filters_applied, as_of,
+                 correlation_id]
+      properties:
+        total_outside_target:    {type: integer, minimum: 0}
+        ready_for_uplift_count:  {type: integer, minimum: 0}
+        blocked_count:           {type: integer, minimum: 0}
+        not_applicable_count:    {type: integer, minimum: 0}
+        top_blocker_categories:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required: [predicate_kind, count]
+            properties:
+              predicate_kind: {$ref: "#/components/schemas/BlockerPredicateKind"}
+              count:          {type: integer, minimum: 0}
+        filters_applied:         {type: object}
+        as_of:                   {type: string, format: date-time}
+        correlation_id:          {type: string}
+
+    ReadinessDeviceRow:
+      type: object
+      additionalProperties: false
+      required: [device_id, hostname, envelope]
+      properties:
+        device_id:        {type: string, format: uuid}
+        hostname:         {type: string}
+        region:           {type: [string, "null"]}
+        site:             {type: [string, "null"]}
+        platform_family:  {type: [string, "null"]}
+        envelope:         {$ref: "#/components/schemas/ReadinessEnvelope"}
+
+    ReadinessDeviceList:
+      type: object
+      additionalProperties: false
+      required: [items, total_returned, next_page_token]
+      properties:
+        items:           {type: array, items: {$ref: "#/components/schemas/ReadinessDeviceRow"}}
+        total_returned:  {type: integer, minimum: 0}
+        next_page_token: {type: [string, "null"]}
+
+    EvaluateRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [device_ids]
+        - required: [scope_selector]
+      properties:
+        device_ids:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items: {type: string, format: uuid}
+        scope_selector:
+          type: object
+          description: same selector grammar as F2 FirmwareTarget.scope_selector
+
+    EvaluateResponse:
+      type: object
+      additionalProperties: false
+      required: [requested_count, evaluated_count, unchanged_count,
+                 not_applicable_count, correlation_id]
+      properties:
+        requested_count:      {type: integer, minimum: 0}
+        evaluated_count:      {type: integer, minimum: 0}
+        unchanged_count:      {type: integer, minimum: 0}
+        not_applicable_count: {type: integer, minimum: 0}
+        correlation_id:       {type: string}
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:           {type: string}
+            message:        {type: string}
+            details:        {type: [object, "null"]}
+            correlation_id: {type: [string, "null"]}
