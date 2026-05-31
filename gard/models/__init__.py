@@ -60,6 +60,7 @@ from gard.models.firmware_upgrade_path import FirmwareUpgradePath  # noqa: E402
 from gard.models.import_job import ImportJob  # noqa: E402
 from gard.models.lifecycle_evidence import LifecycleEvidence  # noqa: E402
 from gard.models.manual_mapping import ManualMapping  # noqa: E402
+from gard.models.netbox_sync_run import NetboxSyncRun  # noqa: E402
 from gard.models.normalization_rule import NormalizationRule  # noqa: E402
 from gard.models.observation import DeviceObservation  # noqa: E402
 from gard.models.readiness_evaluation import ReadinessEvaluation  # noqa: E402
@@ -83,6 +84,7 @@ __all__ = [
     "ImportJob",
     "LifecycleEvidence",
     "ManualMapping",
+    "NetboxSyncRun",
     "NormalizationRule",
     "PredicateKind",
     "PrereqSeverity",

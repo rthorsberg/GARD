@@ -64,6 +64,6 @@ properties:
     minItems: 1
     uniqueItems: true
     description: |
-      DEFERRED in v1 (F2). Loader accepts; evaluator returns unknown with
-      reasons[0].kind=predicate_deferred until F7 wires NetBox tag source.
+      Device must carry all listed tag slugs (from Device.tags after F7 NetBox sync).
+      When tags are unknown (NULL), evaluation is deferred with predicate_deferred.
 additionalProperties: false

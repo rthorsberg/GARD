@@ -1,0 +1,87 @@
+# GARD F7 — isolated NetBox dev stack
+#
+# SAFETY: This file is intentionally separate from deploy/docker-compose.yml.
+# Always use an explicit project name so other NetBox/GARD stacks are untouched:
+#
+#   docker compose -p gard-f7-netbox -f deploy/netbox/docker-compose.yml up -d
+#
+# Default host ports (override via env):
+#   NetBox UI  → 18888  (existing lab stack may use 18080)
+#   Postgres   → 55432  (GARD postgres uses 5432)
+
+name: gard-f7-netbox
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: netbox
+      POSTGRES_USER: netbox
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD:-netbox-dev-password}
+    ports:
+      - "${GARD_NETBOX_PG_HOST_PORT:-55432}:5432"
+    volumes:
+      - netbox-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netbox -d netbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - netbox-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  netbox:
+    image: netboxcommunity/netbox:v4.6-5.0.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${GARD_NETBOX_HOST_PORT:-18888}:8080"
+    environment:
+      SUPERUSER_NAME: ${NETBOX_SUPERUSER_NAME:-admin}
+      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-admin@example.com}
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:-gard-f7-netbox-dev}
+      ALLOWED_HOSTS: "*"
+      DB_HOST: postgres
+      DB_NAME: netbox
+      DB_USER: netbox
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD:-netbox-dev-password}
+      REDIS_HOST: redis
+      REDIS_CACHE_HOST: redis
+      SECRET_KEY: ${NETBOX_SECRET_KEY:-gard-f7-netbox-not-for-production-change-me-use-a-longer-secret-key}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/login/"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  netbox-worker:
+    image: netboxcommunity/netbox:v4.6-5.0.1
+    depends_on:
+      netbox:
+        condition: service_healthy
+    command: /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py rqworker
+    environment:
+      DB_HOST: postgres
+      DB_NAME: netbox
+      DB_USER: netbox
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD:-netbox-dev-password}
+      REDIS_HOST: redis
+      REDIS_CACHE_HOST: redis
+      SECRET_KEY: ${NETBOX_SECRET_KEY:-gard-f7-netbox-not-for-production-change-me-use-a-longer-secret-key}
+
+volumes:
+  netbox-postgres-data: {}
+  netbox-redis-data: {}

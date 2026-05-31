@@ -1,0 +1,37 @@
+# F7 MCP tool contracts (US4).
+#
+# Transport deferred per ADR-0013 (F008). F7 ships delegate +
+# contract tests only.
+
+mcp_tools:
+
+  - name: get_netbox_sync_summary
+    description: |
+      Return NetBox linkage counts: how many GARD devices have a
+      netbox_device_id, how many are CSV-only, how many were orphaned
+      in the last sync, and when the last successful sync completed.
+      Same data as GET /api/v1/integrations/netbox/summary.
+    auth: READ_NETBOX
+    input_schema:
+      type: object
+      additionalProperties: false
+    output_schema:
+      type: object
+      additionalProperties: false
+      required:
+        - netbox_linked
+        - csv_only
+        - orphaned_in_gard
+        - last_sync_at
+        - correlation_id
+      properties:
+        netbox_linked:     {type: integer, minimum: 0}
+        csv_only:          {type: integer, minimum: 0}
+        orphaned_in_gard:  {type: integer, minimum: 0}
+        last_sync_at:
+          type: [string, "null"]
+          format: date-time
+        correlation_id:    {type: string}
+    rest_parity:
+      derived_from: "GET /api/v1/integrations/netbox/summary"
+      proof: tests/integration/test_netbox_mcp_parity.py::test_summary_parity

@@ -14,10 +14,9 @@ Supported keys (all optional; at least one MUST be present per the JSON Schema):
 - ``role_in``:           set membership
 - ``hardware_revision_in``: set membership
 - ``not_in_state``:      device.lifecycle_state NOT IN [...]
-- ``tagged_with``:       deferred — see Constitution-VII / FR-024. Evaluator
-                          returns False AND signals via ``predicate_deferred``;
-                          callers should treat as "unknown" and never coerce
-                          to True.
+- ``tagged_with``:       device must carry all listed tag slugs (from ``Device.tags``).
+                          When ``facts["tags"]`` is ``None`` (never synced), evaluation
+                          is deferred and callers surface ``predicate_deferred``.
 
 Specificity (used by FR-009 tie-break): the count of non-null leaf entries.
 Set-membership keys count once regardless of list length. Ties on specificity
@@ -43,8 +42,8 @@ KNOWN_KEYS: frozenset[str] = frozenset(
     }
 )
 
-# Keys whose evaluation is deferred to a later feature. v1 only has tagged_with.
-DEFERRED_KEYS: frozenset[str] = frozenset({"tagged_with"})
+# Keys whose evaluation is deferred when tag source is unknown (never synced).
+DEFERRED_KEYS: frozenset[str] = frozenset()
 
 EXACT_KEYS: frozenset[str] = frozenset({"vendor_normalized", "platform_family"})
 SET_MEMBERSHIP_KEYS: frozenset[str] = frozenset(
@@ -106,6 +105,16 @@ def evaluate(selector: Mapping[str, Any], facts: Mapping[str, Any]) -> SelectorE
     deferred: set[str] = set()
 
     for key, value in selector.items():
+        if key == "tagged_with":
+            device_tags = facts.get("tags")
+            if device_tags is None:
+                deferred.add(key)
+                return SelectorEvaluation(matched=False, deferred_keys=frozenset(deferred))
+            have = {str(t).lower() for t in device_tags}
+            if not all(str(tag).lower() in have for tag in value):
+                return SelectorEvaluation(matched=False, deferred_keys=frozenset(deferred))
+            continue
+
         if key in DEFERRED_KEYS:
             deferred.add(key)
             # We deliberately do NOT short-circuit here: a deferred leaf

@@ -171,6 +171,8 @@ _PHASE3_ROUTERS: tuple[str, ...] = (
     "readiness",
     # F5 (005-uplift-planning-waves):
     "uplift",
+    # F7 (007-netbox-integration-read):
+    "netbox_integration",
 )
 
 

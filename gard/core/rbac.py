@@ -71,6 +71,10 @@ class Permission:
     MANAGE_EXCEPTION = "uplift.exception.manage"
     APPROVE_EXCEPTION = "uplift.exception.approve"
 
+    # ---- F7: NetBox integration (read-only) ----------------------------
+    READ_NETBOX = "netbox.read"
+    SYNC_NETBOX = "netbox.sync"
+
 
 # fmt: off
 _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
@@ -85,6 +89,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_COMPLIANCE,
         Permission.READ_READINESS,
         Permission.READ_UPLIFT,
+        Permission.READ_NETBOX,
     }),
     Role.lifecycle_manager: frozenset({
         Permission.READ_DEVICE,
@@ -106,6 +111,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_UPLIFT,
         Permission.DRAFT_UPLIFT_WAVE,
         Permission.MANAGE_EXCEPTION,
+        Permission.READ_NETBOX,
+        Permission.SYNC_NETBOX,
     }),
     Role.mcp_client: frozenset({
         Permission.READ_DEVICE,
@@ -117,6 +124,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_COMPLIANCE,
         Permission.READ_READINESS,
         Permission.READ_UPLIFT,
+        Permission.READ_NETBOX,
     }),
     Role.system_admin: frozenset({
         Permission.READ_DEVICE,
@@ -143,6 +151,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.APPROVE_UPLIFT_WAVE,
         Permission.MANAGE_EXCEPTION,
         Permission.APPROVE_EXCEPTION,
+        Permission.READ_NETBOX,
+        Permission.SYNC_NETBOX,
     }),
     # F5: pure-approval role (ADR-0016). No catalog mutation, no token
     # management — just the second-principal approval capability plus
@@ -160,6 +170,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_UPLIFT,
         Permission.APPROVE_UPLIFT_WAVE,
         Permission.APPROVE_EXCEPTION,
+        Permission.READ_NETBOX,
     }),
 }
 # fmt: on
