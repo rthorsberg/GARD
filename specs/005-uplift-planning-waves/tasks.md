@@ -6,75 +6,75 @@ Status convention: `[ ]` pending · `[x]` done · `[~]` in progress.
 
 ## Phase 1 — Foundational (slice 5a)
 
-- [ ] **T001** — Author `adr/ADR-0016-wave-state-machine-and-sod.md` covering R-1..R-9.
-- [ ] **T002** — Add `WaveState` + `ExceptionState` to `gard/models/_enums.py`.
-- [ ] **T003** — Add `Role.change_approver` to `gard/models/_enums.py`.
-- [ ] **T004** — Extend `Permission` in `gard/core/rbac.py` with `DRAFT_UPLIFT_WAVE`, `APPROVE_UPLIFT_WAVE`, `READ_UPLIFT`, `MANAGE_EXCEPTION`, `APPROVE_EXCEPTION`; wire all roles.
-- [ ] **T005** — Extend `gard/core/settings.py` with `uplift_wave_max_devices`, `uplift_change_window_max_hours`, `uplift_change_window_min_minutes`, `uplift_idempotency_ttl_seconds`, `exception_max_lifetime_days`.
-- [ ] **T006** — Author migration `0009_uplift_planning_waves.py` creating `uplift_plans`, `uplift_waves`, `uplift_wave_devices`, `uplift_exceptions` with all CHECK constraints + indices from data-model.md §1.
-- [ ] **T007** — ORM `gard/models/uplift_plan.py` (`UpliftPlan`).
-- [ ] **T008** — ORM `gard/models/uplift_wave.py` (`UpliftWave`).
-- [ ] **T009** — ORM `gard/models/uplift_wave_device.py` (`UpliftWaveDevice` join).
-- [ ] **T010** — ORM `gard/models/uplift_exception.py` (`UpliftException`); register all four in `gard/models/__init__.py`.
+- [x] **T001** — Author `adr/ADR-0016-wave-state-machine-and-sod.md` covering R-1..R-9.
+- [x] **T002** — Add `WaveState` + `ExceptionState` to `gard/models/_enums.py`.
+- [x] **T003** — Add `Role.change_approver` to `gard/models/_enums.py`.
+- [x] **T004** — Extend `Permission` in `gard/core/rbac.py` with `DRAFT_UPLIFT_WAVE`, `APPROVE_UPLIFT_WAVE`, `READ_UPLIFT`, `MANAGE_EXCEPTION`, `APPROVE_EXCEPTION`; wire all roles.
+- [x] **T005** — Extend `gard/core/settings.py` with `uplift_wave_max_devices`, `uplift_change_window_max_hours`, `uplift_change_window_min_minutes`, `uplift_idempotency_ttl_seconds`, `exception_max_lifetime_days`.
+- [x] **T006** — Author migration `0009_uplift_planning_waves.py` creating `uplift_plans`, `uplift_waves`, `uplift_wave_devices`, `uplift_exceptions` with all CHECK constraints + indices from data-model.md §1.
+- [x] **T007** — ORM `gard/models/uplift_plan.py` (`UpliftPlan`).
+- [x] **T008** — ORM `gard/models/uplift_wave.py` (`UpliftWave`).
+- [x] **T009** — ORM `gard/models/uplift_wave_device.py` (`UpliftWaveDevice` join).
+- [x] **T010** — ORM `gard/models/uplift_exception.py` (`UpliftException`); register all four in `gard/models/__init__.py`.
 
 ## Phase 2 — State machine + envelope (slice 5a)
 
-- [ ] **T011** — `gard/core/uplift_state_machine.py` — closed transition matrix `WAVE_TRANSITIONS`, `EXCEPTION_TRANSITIONS`, `is_legal_wave_transition(from, to)`, `is_legal_exception_transition(from, to)`, pure-fn `assert_separation_of_duties(drafter, approver, action)`.
-- [ ] **T012** — Unit tests `tests/unit/test_uplift_state_machine.py` — full truth table for every legal + illegal cell.
-- [ ] **T013** — Unit tests `tests/unit/test_uplift_separation_of_duties.py` — drafter == approver → raises; drafter ≠ approver → passes; self-rejection allowed.
-- [ ] **T014** — Extend `gard/core/envelope.py` with `WaveEnvelope`, `PlanEnvelope`, `ExceptionEnvelope`, `build_wave_envelope()`, `build_plan_envelope()`, `build_exception_envelope()`.
-- [ ] **T015** — Extend `gard/core/envelope.py` `RecommendedActionKind` with F5 kinds; extend `ComplianceReasonKind` with `active_exception`.
-- [ ] **T016** — Extend `gard/core/recommended_actions.py` with builders for the 5 new F5 kinds.
-- [ ] **T017** — Extend `tests/conftest.py` `_DATA_TABLES` with the four F5 tables (truncate order: exceptions, wave_devices, waves, plans).
-- [ ] **T018** — Run alembic upgrade head against the test DB; confirm new tables visible.
-- [ ] **T019** — `uv run ruff check` + `uv run mypy gard` clean on all foundational + state-machine modules.
-- [ ] **T020** — Commit + push slice 5a; open draft PR.
+- [x] **T011** — `gard/core/uplift_state_machine.py` — closed transition matrix `WAVE_TRANSITIONS`, `EXCEPTION_TRANSITIONS`, `is_legal_wave_transition(from, to)`, `is_legal_exception_transition(from, to)`, pure-fn `assert_separation_of_duties(drafter, approver, action)`.
+- [x] **T012** — Unit tests `tests/unit/test_uplift_state_machine.py` — full truth table for every legal + illegal cell.
+- [x] **T013** — Unit tests `tests/unit/test_uplift_separation_of_duties.py` — drafter == approver → raises; drafter ≠ approver → passes; self-rejection allowed.
+- [x] **T014** — Extend `gard/core/envelope.py` with `WaveEnvelope`, `PlanEnvelope`, `ExceptionEnvelope`, `build_wave_envelope()`, `build_plan_envelope()`, `build_exception_envelope()`.
+- [x] **T015** — Extend `gard/core/envelope.py` `RecommendedActionKind` with F5 kinds; extend `ComplianceReasonKind` with `active_exception`.
+- [x] **T016** — Extend `gard/core/recommended_actions.py` with builders for the 5 new F5 kinds.
+- [x] **T017** — Extend `tests/conftest.py` `_DATA_TABLES` with the four F5 tables (truncate order: exceptions, wave_devices, waves, plans).
+- [x] **T018** — Run alembic upgrade head against the test DB; confirm new tables visible.
+- [x] **T019** — `uv run ruff check` + `uv run mypy gard` clean on all foundational + state-machine modules.
+- [x] **T020** — Commit + push slice 5a; open draft PR.
 
 ## Phase 3 — US1: plans + wave drafting (slice 5b)
 
-- [ ] **T021** — `gard/core/uplift_plan_controller.py` — `create_plan()`, `archive_plan()`, `list_plans()`, `get_plan()` + `_emit` audit helpers.
-- [ ] **T022** — `gard/core/uplift_wave_controller.py` — `draft_wave()` resolving `scope_selector` via F4's latest verdicts; mode=`strict` vs `skip_ineligible` branches.
-- [ ] **T023** — Idempotency check inside `draft_wave()` (R-4) — lookup by `(plan_id, idempotency_key)` within TTL.
-- [ ] **T024** — `gard/api/schemas/uplift.py` — Pydantic models matching `contracts/rest-openapi.yaml`: `CreatePlanRequest`, `CreateWaveRequest`, `PlanEnvelope`, `WaveEnvelope`, `PlanList`, `WaveList`, etc.
-- [ ] **T025** — `gard/api/routers/uplift.py` — endpoints `POST /uplift/plans`, `GET /uplift/plans`, `POST /uplift/plans/{id}/archive`, `POST /uplift/plans/{plan_id}/waves`, `GET /uplift/waves`, `GET /uplift/waves/{id}` with the `Idempotency-Key` header path.
-- [ ] **T026** — Wire `uplift` router into `gard/api/app.py` `_PHASE3_ROUTERS`.
-- [ ] **T027** — Integration test `tests/integration/test_us1_draft_wave.py` — create plan, draft wave from `ready_for_uplift` devices, assert 201 + audit row + no lifecycle transition.
-- [ ] **T028** — Integration test for `mode=strict` ineligible → 422 with `INELIGIBLE_DEVICES_IN_SCOPE`.
-- [ ] **T029** — Integration test for `mode=skip_ineligible` → 201 with `skipped[]`.
-- [ ] **T030** — Integration test for empty scope → 422 `EMPTY_WAVE`.
-- [ ] **T031** — Integration test idempotency replay (same key within 5 min returns same wave id; same key after TTL creates new).
-- [ ] **T032** — Integration test invalid change window (past, > 24h, < 15m) → 422 `INVALID_CHANGE_WINDOW`.
-- [ ] **T033** — Integration test target_version not in live catalogue → 422 `TARGET_VERSION_NOT_LIVE`.
-- [ ] **T034** — Integration test plan archival hides from default listing, returns via `include_archived=true`.
-- [ ] **T035** — `uv run pytest -q` green; commit.
+- [x] **T021** — `gard/core/uplift_plan_controller.py` — `create_plan()`, `archive_plan()`, `list_plans()`, `get_plan()` + `_emit` audit helpers.
+- [x] **T022** — `gard/core/uplift_wave_controller.py` — `draft_wave()` resolving `scope_selector` via F4's latest verdicts; mode=`strict` vs `skip_ineligible` branches.
+- [x] **T023** — Idempotency check inside `draft_wave()` (R-4) — lookup by `(plan_id, idempotency_key)` within TTL.
+- [x] **T024** — `gard/api/schemas/uplift.py` — Pydantic models matching `contracts/rest-openapi.yaml`: `CreatePlanRequest`, `CreateWaveRequest`, `PlanEnvelope`, `WaveEnvelope`, `PlanList`, `WaveList`, etc.
+- [x] **T025** — `gard/api/routers/uplift.py` — endpoints `POST /uplift/plans`, `GET /uplift/plans`, `POST /uplift/plans/{id}/archive`, `POST /uplift/plans/{plan_id}/waves`, `GET /uplift/waves`, `GET /uplift/waves/{id}` with the `Idempotency-Key` header path.
+- [x] **T026** — Wire `uplift` router into `gard/api/app.py` `_PHASE3_ROUTERS`.
+- [x] **T027** — Integration test `tests/integration/test_us1_draft_wave.py` — create plan, draft wave from `ready_for_uplift` devices, assert 201 + audit row + no lifecycle transition.
+- [x] **T028** — Integration test for `mode=strict` ineligible → 422 with `INELIGIBLE_DEVICES_IN_SCOPE`.
+- [x] **T029** — Integration test for `mode=skip_ineligible` → 201 with `skipped[]`.
+- [x] **T030** — Integration test for empty scope → 422 `EMPTY_WAVE`.
+- [x] **T031** — Integration test idempotency replay (same key within 5 min returns same wave id; same key after TTL creates new).
+- [x] **T032** — Integration test invalid change window (past, > 24h, < 15m) → 422 `INVALID_CHANGE_WINDOW`.
+- [x] **T033** — Integration test target_version not in live catalogue → 422 `TARGET_VERSION_NOT_LIVE`.
+- [x] **T034** — Integration test plan archival hides from default listing, returns via `include_archived=true`.
+- [x] **T035** — `uv run pytest -q` green; commit.
 
 ## Phase 4 — US2: submit / approve / reject / cancel (slice 5b)
 
-- [ ] **T036** — `uplift_wave_controller.submit()` — transitions wave to `submitted`; flips every device `ready_for_uplift → uplift_planned → approval_pending`; emits `uplift_wave.submitted`.
-- [ ] **T037** — `uplift_wave_controller.approve()` — SoD check (R-2); optimistic state guard (R-7); citation persist; device transitions `approval_pending → approved`; emits `uplift_wave.approved` carrying citation.
-- [ ] **T038** — `uplift_wave_controller.reject()` — same shape as approve but returns devices to `ready_for_uplift`; emits `uplift_wave.rejected`.
-- [ ] **T039** — `uplift_wave_controller.cancel()` — drafter OR APPROVE_UPLIFT_WAVE holder; only from `draft` or `submitted`; emits `uplift_wave.cancelled`.
-- [ ] **T040** — `gard/api/routers/uplift.py` — endpoints `POST /uplift/waves/{id}/submit`, `/approve`, `/reject`, `/cancel`.
-- [ ] **T041** — Integration test happy-path approval (drafter ≠ approver, citation valid).
-- [ ] **T042** — Integration test self-approval → 403 `SELF_APPROVAL_FORBIDDEN`.
-- [ ] **T043** — Integration test self-rejection IS allowed; audit row carries `self_rejection=true`.
-- [ ] **T044** — Integration test re-approve approved wave → 409 `WAVE_STATE_MISMATCH`.
-- [ ] **T045** — Integration test concurrent approval — two simultaneous POSTs, exactly one wins (R-7).
-- [ ] **T046** — Integration test citation length bounds (< 20 → 422; > 2000 → 422).
-- [ ] **T047** — Integration test cancellation by non-drafter without `APPROVE_UPLIFT_WAVE` → 403.
-- [ ] **T048** — Integration test `WAVE_TRANSITION_FORBIDDEN` for `draft → approved` (must submit first).
-- [ ] **T049** — Verify exactly one audit row per state transition per device (SC-002).
-- [ ] **T050** — `uv run pytest -q` green; commit.
+- [x] **T036** — `uplift_wave_controller.submit()` — transitions wave to `submitted`; flips every device `ready_for_uplift → uplift_planned → approval_pending`; emits `uplift_wave.submitted`.
+- [x] **T037** — `uplift_wave_controller.approve()` — SoD check (R-2); optimistic state guard (R-7); citation persist; device transitions `approval_pending → approved`; emits `uplift_wave.approved` carrying citation.
+- [x] **T038** — `uplift_wave_controller.reject()` — same shape as approve but returns devices to `ready_for_uplift`; emits `uplift_wave.rejected`.
+- [x] **T039** — `uplift_wave_controller.cancel()` — drafter OR APPROVE_UPLIFT_WAVE holder; only from `draft` or `submitted`; emits `uplift_wave.cancelled`.
+- [x] **T040** — `gard/api/routers/uplift.py` — endpoints `POST /uplift/waves/{id}/submit`, `/approve`, `/reject`, `/cancel`.
+- [x] **T041** — Integration test happy-path approval (drafter ≠ approver, citation valid).
+- [x] **T042** — Integration test self-approval → 403 `SELF_APPROVAL_FORBIDDEN`.
+- [x] **T043** — Integration test self-rejection IS allowed; audit row carries `self_rejection=true`.
+- [x] **T044** — Integration test re-approve approved wave → 409 `WAVE_STATE_MISMATCH`.
+- [x] **T045** — Integration test concurrent approval — two simultaneous POSTs, exactly one wins (R-7).
+- [x] **T046** — Integration test citation length bounds (< 20 → 422; > 2000 → 422).
+- [x] **T047** — Integration test cancellation by non-drafter without `APPROVE_UPLIFT_WAVE` → 403.
+- [x] **T048** — Integration test `WAVE_TRANSITION_FORBIDDEN` for `draft → approved` (must submit first).
+- [x] **T049** — Verify exactly one audit row per state transition per device (SC-002).
+- [x] **T050** — `uv run pytest -q` green; commit.
 
 ## Phase 5 — Wave invalidation hook (slice 5b)
 
-- [ ] **T051** — `uplift_wave_controller.invalidate_affected_waves(session, audit_session, *, affected_device_ids, reason)` — finds non-terminal waves containing any of the device ids; transitions to `invalidated`; returns devices to F4 verdict; emits one audit row per wave.
-- [ ] **T052** — Extend `gard/core/firmware_catalog_controller._reevaluate_compliance_post_reload` to call `invalidate_affected_waves()` after the F4 pass for the same `affected` set.
-- [ ] **T053** — Integration test — seed a `submitted` wave, inject a new prereq rule that blocks one of its devices, reload catalogue, assert wave is `invalidated` + audit row.
-- [ ] **T054** — Integration test — target retirement: remove the wave's `target_version` from catalogue → wave invalidated.
-- [ ] **T055** — Integration test — invalidation returns devices to `ready_for_uplift` (or `blocked` if F4 reverdicts).
-- [ ] **T056** — Lifecycle transition correctness: device delete attempt on a member of a non-terminal wave → 409 `DEVICE_IN_OPEN_WAVE` (smoke this at the controller level; full endpoint test deferred to device-decommission feature).
-- [ ] **T057** — Slice 5b commit + push; mark PR ready.
+- [x] **T051** — `uplift_wave_controller.invalidate_affected_waves(session, audit_session, *, affected_device_ids, reason)` — finds non-terminal waves containing any of the device ids; transitions to `invalidated`; returns devices to F4 verdict; emits one audit row per wave.
+- [x] **T052** — Extend `gard/core/firmware_catalog_controller._reevaluate_compliance_post_reload` to call `invalidate_affected_waves()` after the F4 pass for the same `affected` set.
+- [x] **T053** — Integration test — seed a `submitted` wave, inject a new prereq rule that blocks one of its devices, reload catalogue, assert wave is `invalidated` + audit row.
+- [x] **T054** — Integration test — target retirement: remove the wave's `target_version` from catalogue → wave invalidated.
+- [x] **T055** — Integration test — invalidation returns devices to `ready_for_uplift` (or `blocked` if F4 reverdicts).
+- [x] **T056** — Lifecycle transition correctness: device delete attempt on a member of a non-terminal wave → 409 `DEVICE_IN_OPEN_WAVE` (smoke this at the controller level; full endpoint test deferred to device-decommission feature).
+- [x] **T057** — Slice 5b commit + push; mark PR ready.
 - [ ] **T058** — Slice 5b merge to `005-uplift-planning-waves` long-running branch.
 
 ## Phase 6 — US3: exceptions (slice 5c)
