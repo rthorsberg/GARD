@@ -58,6 +58,19 @@ class Permission:
     READ_READINESS = "readiness.read"
     RUN_READINESS_EVAL = "readiness.evaluate"
 
+    # ---- F5: uplift planning & waves -------------------------------------
+    # READ_UPLIFT gates every GET under /api/v1/uplift/. DRAFT_UPLIFT_WAVE
+    # gates create/submit/cancel on waves + plans (lifecycle_manager
+    # surface). APPROVE_UPLIFT_WAVE gates approve/reject; this is the
+    # second-principal capability required by ADR-0016 §B SoD enforcement.
+    # MANAGE_EXCEPTION + APPROVE_EXCEPTION mirror the wave pair for the
+    # exception entity.
+    READ_UPLIFT = "uplift.read"
+    DRAFT_UPLIFT_WAVE = "uplift.wave.draft"
+    APPROVE_UPLIFT_WAVE = "uplift.wave.approve"
+    MANAGE_EXCEPTION = "uplift.exception.manage"
+    APPROVE_EXCEPTION = "uplift.exception.approve"
+
 
 # fmt: off
 _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
@@ -71,6 +84,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_FIRMWARE_CATALOG,
         Permission.READ_COMPLIANCE,
         Permission.READ_READINESS,
+        Permission.READ_UPLIFT,
     }),
     Role.lifecycle_manager: frozenset({
         Permission.READ_DEVICE,
@@ -89,6 +103,9 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.RUN_COMPLIANCE_EVAL,
         Permission.READ_READINESS,
         Permission.RUN_READINESS_EVAL,
+        Permission.READ_UPLIFT,
+        Permission.DRAFT_UPLIFT_WAVE,
+        Permission.MANAGE_EXCEPTION,
     }),
     Role.mcp_client: frozenset({
         Permission.READ_DEVICE,
@@ -99,6 +116,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.READ_FIRMWARE_CATALOG,
         Permission.READ_COMPLIANCE,
         Permission.READ_READINESS,
+        Permission.READ_UPLIFT,
     }),
     Role.system_admin: frozenset({
         Permission.READ_DEVICE,
@@ -120,6 +138,28 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.RUN_COMPLIANCE_EVAL,
         Permission.READ_READINESS,
         Permission.RUN_READINESS_EVAL,
+        Permission.READ_UPLIFT,
+        Permission.DRAFT_UPLIFT_WAVE,
+        Permission.APPROVE_UPLIFT_WAVE,
+        Permission.MANAGE_EXCEPTION,
+        Permission.APPROVE_EXCEPTION,
+    }),
+    # F5: pure-approval role (ADR-0016). No catalog mutation, no token
+    # management — just the second-principal approval capability plus
+    # broad read access for review work.
+    Role.change_approver: frozenset({
+        Permission.READ_DEVICE,
+        Permission.LIST_DEVICES,
+        Permission.READ_OBSERVATION,
+        Permission.READ_AUDIT,
+        Permission.READ_EVIDENCE,
+        Permission.READ_RULE,
+        Permission.READ_FIRMWARE_CATALOG,
+        Permission.READ_COMPLIANCE,
+        Permission.READ_READINESS,
+        Permission.READ_UPLIFT,
+        Permission.APPROVE_UPLIFT_WAVE,
+        Permission.APPROVE_EXCEPTION,
     }),
 }
 # fmt: on

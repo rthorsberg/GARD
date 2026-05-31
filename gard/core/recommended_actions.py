@@ -223,6 +223,99 @@ def import_observation(
     )
 
 
+# ---- F5 builders (uplift planning & waves) ------------------------------
+
+
+def submit_for_approval(
+    *,
+    wave_id: str,
+    detail: str | None = None,
+) -> RecommendedAction:
+    """draft wave is complete: drafter should submit for review."""
+    return RecommendedAction(
+        kind="submit_for_approval",
+        target_device_id=None,
+        target_firmware_target_id=wave_id,
+        requires=[Permission.DRAFT_UPLIFT_WAVE],
+        detail=(
+            detail
+            or f"wave {wave_id} is in draft with devices attached; "
+            f"POST /api/v1/uplift/waves/{wave_id}/submit"
+        ),
+    )
+
+
+def assign_approver(
+    *,
+    wave_id: str,
+    detail: str | None = None,
+) -> RecommendedAction:
+    """submitted wave needs a second principal to approve."""
+    return RecommendedAction(
+        kind="assign_approver",
+        target_device_id=None,
+        target_firmware_target_id=wave_id,
+        requires=[Permission.APPROVE_UPLIFT_WAVE],
+        detail=(
+            detail
+            or f"wave {wave_id} awaits a change_approver (different subject "
+            f"from drafter) to call POST /api/v1/uplift/waves/{wave_id}/approve"
+        ),
+    )
+
+
+def extend_change_window(
+    *,
+    wave_id: str,
+    detail: str | None = None,
+) -> RecommendedAction:
+    """change window is in the past or too tight: redraft a new wave."""
+    return RecommendedAction(
+        kind="extend_change_window",
+        target_device_id=None,
+        target_firmware_target_id=wave_id,
+        requires=[Permission.DRAFT_UPLIFT_WAVE],
+        detail=(
+            detail
+            or f"wave {wave_id} change_window has expired; cancel and "
+            "redraft with a future-dated window (15min-24h)"
+        ),
+    )
+
+
+def request_exception_review(
+    *,
+    device_id: uuid.UUID,
+    detail: str | None = None,
+) -> RecommendedAction:
+    """blocked device may warrant a known-risk exception: file one."""
+    return RecommendedAction(
+        kind="request_exception_review",
+        target_device_id=str(device_id),
+        requires=[Permission.MANAGE_EXCEPTION],
+        detail=(
+            detail
+            or "POST /api/v1/uplift/exceptions with a 20..2000 char justification "
+            "and an expires_at within 365 days"
+        ),
+    )
+
+
+def cancel_wave(
+    *,
+    wave_id: str,
+    detail: str | None = None,
+) -> RecommendedAction:
+    """draft/submitted wave is no longer wanted: drafter cancels."""
+    return RecommendedAction(
+        kind="cancel_wave",
+        target_device_id=None,
+        target_firmware_target_id=wave_id,
+        requires=[Permission.DRAFT_UPLIFT_WAVE],
+        detail=(detail or f"POST /api/v1/uplift/waves/{wave_id}/cancel with a 10..500 char reason"),
+    )
+
+
 # ---- top-level composer --------------------------------------------------
 
 

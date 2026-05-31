@@ -62,6 +62,9 @@ ReasonKind = Literal[
     "stale_observation",
     "missing_upgrade_path",
     "package_not_built",
+    # F5: surfaced when an approved-and-active exception flips the
+    # readiness verdict to `not_applicable` (ADR-0016 §C).
+    "active_exception",
 ]
 
 

@@ -44,6 +44,9 @@ ReasonKind = Literal[
     "stale_observation",
     "missing_upgrade_path",
     "package_not_built",
+    # F5: surfaced via F4 → F3-shaped reasons when an exception is
+    # the reason for `not_applicable`.
+    "active_exception",
 ]
 
 RecommendedActionKind = Literal[

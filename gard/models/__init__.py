@@ -63,6 +63,10 @@ from gard.models.manual_mapping import ManualMapping  # noqa: E402
 from gard.models.normalization_rule import NormalizationRule  # noqa: E402
 from gard.models.observation import DeviceObservation  # noqa: E402
 from gard.models.readiness_evaluation import ReadinessEvaluation  # noqa: E402
+from gard.models.uplift_exception import UpliftException  # noqa: E402
+from gard.models.uplift_plan import UpliftPlan  # noqa: E402
+from gard.models.uplift_wave import UpliftWave  # noqa: E402
+from gard.models.uplift_wave_device import UpliftWaveDevice  # noqa: E402
 
 __all__ = [
     "ApiToken",
@@ -83,6 +87,10 @@ __all__ = [
     "PredicateKind",
     "PrereqSeverity",
     "ReadinessEvaluation",
+    "UpliftException",
+    "UpliftPlan",
+    "UpliftWave",
+    "UpliftWaveDevice",
     "utcnow",
     "uuid7_default",
 ]
