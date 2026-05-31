@@ -69,6 +69,9 @@ def upsert_from_row(
             model_normalized=normalization.output.get("model_normalized"),
             platform_family=normalization.output.get("platform_family"),
             hardware_revision=row.hardware_revision,
+            ram_mb=row.ram_mb,
+            disk_mb=row.disk_mb,
+            licenses=row.licenses,
             source_system=source_system,
             lifecycle_state=target_state,
             created_at=ts,
@@ -88,6 +91,12 @@ def upsert_from_row(
         existing.management_ip = row.management_ip
     if row.hardware_revision is not None:
         existing.hardware_revision = row.hardware_revision
+    if row.ram_mb is not None:
+        existing.ram_mb = row.ram_mb
+    if row.disk_mb is not None:
+        existing.disk_mb = row.disk_mb
+    if row.licenses is not None:
+        existing.licenses = row.licenses
 
     if normalization.output:
         if "vendor_normalized" in normalization.output:

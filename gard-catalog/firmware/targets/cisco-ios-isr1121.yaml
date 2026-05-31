@@ -1,0 +1,10 @@
+catalog_schema_version: "1.0.0"
+name: cisco-ios-isr1121
+platform_family: ios
+target_version: "17.12.4"
+scope_selector:
+  vendor_normalized: cisco
+  platform_family: ios
+notes: |
+  MVP reference target for Cisco ISR1121 / IOS-XE. Derived from
+  gard-speckit-start/examples/firmware-targets.yaml.

@@ -1,0 +1,9 @@
+catalog_schema_version: "1.0.0"
+name: isr1121-minimum-flash
+applies_to:
+  vendor_normalized: cisco
+  platform_family: ios
+predicate:
+  kind: min_disk_mb
+  min_mb: 1500
+severity: required

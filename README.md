@@ -151,9 +151,9 @@ Complexity Tracking section and be approved before implementation.
   exception expiry wired into F4 evaluate, uplift REST surface, and
   six read-shaped MCP delegates.
 - 🚧 **F6 — MVP Vertical Slice Validation** on
-  `006-mvp-vertical-slice-cisco-isr1121` (design phase). End-to-end
-  Cisco ISR1121 proof: integration tests, catalog/fixture data, and
-  operator runbook — validates F1–F5, no new product code.
+  `006-mvp-vertical-slice-cisco-isr1121` (implementation). Cisco ISR1121
+  end-to-end proof: `test_mvp_vertical_slice_isr1121.py` (12 tests, all
+  ten MVP criteria), ISR1121 catalog fixtures, `seed-isr1121.sh`.
 - ⏭️ **Next after F6**: F7 — NetBox integration (read-only).
 
 ## Quickstart
