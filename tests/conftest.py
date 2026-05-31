@@ -76,6 +76,14 @@ def engine(_migrated_db: str) -> Iterator[Engine]:
 
 
 _DATA_TABLES = (
+    # F5 tables — must be truncated before the tables they FK to (devices,
+    # readiness_evaluations, firmware_prerequisite_rules). CASCADE on
+    # TRUNCATE handles the dependency graph either way, but listing them
+    # first keeps the dependency direction obvious to a reader.
+    "uplift_wave_devices",
+    "uplift_exceptions",
+    "uplift_waves",
+    "uplift_plans",
     "readiness_evaluations",
     "compliance_evaluations",
     "manual_mappings",

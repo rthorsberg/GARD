@@ -166,6 +166,55 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- F5: uplift planning & waves ------------------------------------
+    uplift_wave_max_devices: int = Field(
+        default=500,
+        ge=1,
+        description=(
+            "Hard cap on the device set committed to a single wave "
+            "(F5 spec FR-007). Larger drafts are refused with HTTP 413 "
+            "WAVE_TOO_LARGE. Operators stage multi-thousand-device "
+            "uplifts as multiple waves to keep blast radius bounded."
+        ),
+    )
+    uplift_change_window_max_hours: int = Field(
+        default=24,
+        ge=1,
+        le=168,
+        description=(
+            "Maximum duration of a wave's change_window (end - start). "
+            "Caps the executor's risk surface per wave (ADR-0016 §C)."
+        ),
+    )
+    uplift_change_window_min_minutes: int = Field(
+        default=15,
+        ge=1,
+        description=(
+            "Minimum duration of a wave's change_window. Prevents "
+            "zero-length or sub-minute windows that would make audit "
+            "evidence ambiguous."
+        ),
+    )
+    uplift_idempotency_ttl_seconds: int = Field(
+        default=300,
+        ge=1,
+        description=(
+            "TTL on Idempotency-Key header reuse for wave creation "
+            "(ADR-0016 §E). After this window the same key creates a "
+            "fresh wave row rather than returning the original."
+        ),
+    )
+    exception_max_lifetime_days: int = Field(
+        default=180,
+        ge=1,
+        le=730,
+        description=(
+            "Maximum days between (now, expires_at) at creation time. "
+            "Bounds the worst-case 'we forgot about this' liability. "
+            "Six months is the operator-tested upper bound."
+        ),
+    )
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_weak_prod_secret(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]

@@ -1,0 +1,209 @@
+version: "0.5.0"
+mcp_tools:
+  - name: create_uplift_wave_draft
+    description: |
+      Draft generator (R-9). Resolves a scope_selector against F4's
+      latest readiness verdicts and returns a proposed wave envelope
+      (devices + their F4 snapshots) WITHOUT writing to the database.
+      The AI agent presents the proposal; the human operator submits
+      it through the REST surface to actually create the wave.
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      required: [plan_id, name, target_version, target_platform_family, scope_selector, change_window_start, change_window_end]
+      properties:
+        plan_id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        target_version: { type: string, minLength: 1, maxLength: 64 }
+        target_platform_family: { type: string, minLength: 1, maxLength: 64 }
+        scope_selector: { type: object, additionalProperties: true }
+        change_window_start: { type: string, format: date-time }
+        change_window_end: { type: string, format: date-time }
+        mode:
+          type: string
+          enum: [strict, skip_ineligible]
+          default: strict
+    output_schema:
+      type: object
+      properties:
+        proposed_devices: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              device_id: { type: string, format: uuid }
+              hostname: { type: string }
+              readiness_state: { type: string }
+              target_version: { type: string, nullable: true }
+              observed_version: { type: string, nullable: true }
+        change_window_valid: { type: boolean }
+        target_version_live: { type: boolean }
+        warnings: { type: array, items: { type: string } }
+        correlation_id: { type: string }
+
+  - name: create_exception_review_draft
+    description: |
+      Draft generator for an exception filing. Reads the latest F4
+      blocker list for a device and returns a structured exception
+      proposal (device + selected blocker + suggested expiry). Read-only.
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      required: [device_id]
+      properties:
+        device_id: { type: string, format: uuid }
+        suggested_lifetime_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+    output_schema:
+      type: object
+      properties:
+        device_id: { type: string, format: uuid }
+        hostname: { type: string, nullable: true }
+        candidate_blockers:
+          type: array
+          items:
+            type: object
+            properties:
+              blocker_rule_id: { type: string, format: uuid, nullable: true }
+              synthetic_kind: { type: string, nullable: true }
+              predicate_kind: { type: string }
+              severity: { type: string }
+              detail: { type: string }
+        suggested_expires_at: { type: string, format: date-time }
+        already_active_exception_id: { type: string, format: uuid, nullable: true }
+        correlation_id: { type: string }
+
+  - name: get_uplift_plan_summary
+    description: |
+      Estate-wide planning summary — counts of plans by archived/active
+      and waves by state. Read-only.
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        plan_id: { type: string, format: uuid }
+    output_schema:
+      type: object
+      properties:
+        total_plans: { type: integer, minimum: 0 }
+        active_plans: { type: integer, minimum: 0 }
+        archived_plans: { type: integer, minimum: 0 }
+        wave_counts_by_state:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        as_of: { type: string, format: date-time }
+        correlation_id: { type: string }
+
+  - name: list_open_waves
+    description: |
+      Lists waves currently in `draft` or `submitted` state — the queue
+      of "things waiting on a human". Bounded by `limit` (max 500).
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        plan_id: { type: string, format: uuid }
+        region: { type: string }
+        platform_family: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    output_schema:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              wave_id: { type: string, format: uuid }
+              plan_id: { type: string, format: uuid }
+              name: { type: string }
+              state: { type: string }
+              target_version: { type: string }
+              device_count: { type: integer, minimum: 0 }
+              change_window_start: { type: string, format: date-time }
+              drafted_by: { type: string }
+              drafted_at: { type: string, format: date-time }
+        total_returned: { type: integer, minimum: 0 }
+        correlation_id: { type: string }
+
+  - name: list_active_exceptions
+    description: |
+      Lists currently-approved exceptions that have not yet expired.
+      Useful for "what risk are we carrying right now?" reporting.
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      properties:
+        region: { type: string }
+        platform_family: { type: string }
+        expires_within_days: { type: integer, minimum: 1, maximum: 365 }
+        limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    output_schema:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              exception_id: { type: string, format: uuid }
+              device_id: { type: string, format: uuid }
+              hostname: { type: string, nullable: true }
+              predicate_kind: { type: string }
+              justification_excerpt: { type: string }
+              expires_at: { type: string, format: date-time }
+              approved_by: { type: string }
+              approved_at: { type: string, format: date-time }
+        total_returned: { type: integer, minimum: 0 }
+        correlation_id: { type: string }
+
+  - name: explain_wave
+    description: |
+      Full per-wave explanation — state, citations, the device list
+      with each device's last-known F4 envelope summary, and any
+      invalidation reasoning. Use to compose change-management
+      tickets or runbook bodies.
+    auth: READ_UPLIFT
+    input_schema:
+      type: object
+      additionalProperties: false
+      required: [wave_id]
+      properties:
+        wave_id: { type: string, format: uuid }
+    output_schema:
+      type: object
+      properties:
+        wave_id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        name: { type: string }
+        state: { type: string }
+        target_version: { type: string }
+        change_window:
+          type: object
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        drafted_by: { type: string }
+        approved_by: { type: string, nullable: true }
+        approval_citation: { type: string, nullable: true }
+        invalidated_reason: { type: string, nullable: true }
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              device_id: { type: string, format: uuid }
+              hostname: { type: string }
+              readiness_state_at_draft: { type: string, nullable: true }
+              readiness_state_now: { type: string, nullable: true }
+        correlation_id: { type: string }

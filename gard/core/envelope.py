@@ -182,6 +182,10 @@ ComplianceReasonKind = Literal[
     "stale_observation",
     "missing_upgrade_path",
     "package_not_built",
+    # F5 (uplift planning & waves) addition — surfaced by F4 when a
+    # blocked device has an approved-and-active exception, flipping
+    # the readiness verdict to `not_applicable`.
+    "active_exception",
 ]
 
 RecommendedActionKind = Literal[
@@ -200,6 +204,12 @@ RecommendedActionKind = Literal[
     "license_acquire",
     "firmware_intermediate_step",
     "import_observation",
+    # F5 (uplift planning & waves) additions — see ADR-0016.
+    "submit_for_approval",
+    "assign_approver",
+    "extend_change_window",
+    "request_exception_review",
+    "cancel_wave",
 ]
 
 
@@ -402,5 +412,245 @@ def build_readiness_envelope(
         confidence=confidence,
         evaluation_id=evaluation_id,
         evaluated_at=evaluated_at or utcnow(),
+        correlation_id=correlation_id or get_correlation_id(),
+    )
+
+
+# ---- F5: uplift planning & waves envelopes ---------------------------
+# F5 introduces three explainable envelopes — Plan, Wave, Exception — and
+# extends `RecommendedActionKind` + `ComplianceReasonKind` (see literals
+# above). The envelopes carry the full audit-grade lifecycle: every
+# transition's (subject, timestamp, citation) is exposed verbatim from
+# the row, so explainable callers (UIs, MCP tools) never have to fetch
+# the audit chain to render history.
+
+WaveStateLiteral = Literal[
+    "draft",
+    "submitted",
+    "approved",
+    "rejected",
+    "cancelled",
+    "invalidated",
+]
+
+ExceptionStateLiteral = Literal[
+    "pending_review",
+    "approved",
+    "rejected",
+    "expired",
+    "withdrawn",
+]
+
+
+class PlanEnvelope(BaseModel):
+    """F5 plan envelope — the lightweight grouping surface."""
+
+    id: str
+    name: str
+    description: str | None = None
+    created_by: str
+    created_at: dt.datetime
+    archived_at: dt.datetime | None = None
+    archived_by: str | None = None
+    wave_count: int = Field(default=0, ge=0)
+    correlation_id: str | None = None
+
+
+class WaveDeviceEntry(BaseModel):
+    """One row in :class:`WaveEnvelope.devices`."""
+
+    device_id: str
+    position: int
+    readiness_evaluation_ref: str | None = None
+    snapshot_target_version: str | None = None
+    snapshot_observed_version: str | None = None
+
+
+class WaveEnvelope(BaseModel):
+    """F5 wave envelope — full lifecycle + device snapshot."""
+
+    id: str
+    plan_id: str
+    name: str
+    state: WaveStateLiteral
+    target_version: str
+    target_platform_family: str
+    change_window_start: dt.datetime
+    change_window_end: dt.datetime
+    drafted_by: str
+    drafted_at: dt.datetime
+    submitted_by: str | None = None
+    submitted_at: dt.datetime | None = None
+    approved_by: str | None = None
+    approved_at: dt.datetime | None = None
+    approval_citation: str | None = None
+    rejected_by: str | None = None
+    rejected_at: dt.datetime | None = None
+    rejection_citation: str | None = None
+    cancelled_by: str | None = None
+    cancelled_at: dt.datetime | None = None
+    cancellation_reason: str | None = None
+    invalidated_at: dt.datetime | None = None
+    invalidated_reason: str | None = None
+    devices: list[WaveDeviceEntry] = Field(default_factory=list)
+    device_count: int = Field(default=0, ge=0)
+    skipped_devices: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_actions: list[RecommendedAction] = Field(default_factory=list)
+    idempotency_key: str | None = None
+    correlation_id: str | None = None
+
+
+class ExceptionEnvelope(BaseModel):
+    """F5 exception envelope — full lifecycle + blocker citation."""
+
+    id: str
+    device_id: str
+    state: ExceptionStateLiteral
+    blocker_rule_id: str | None = None
+    blocker_rule_name: str | None = None
+    synthetic_kind: BlockerPredicateKind | None = None
+    justification: str
+    expires_at: dt.datetime
+    filed_by: str
+    filed_at: dt.datetime
+    approved_by: str | None = None
+    approved_at: dt.datetime | None = None
+    rejected_by: str | None = None
+    rejected_at: dt.datetime | None = None
+    withdrawn_by: str | None = None
+    withdrawn_at: dt.datetime | None = None
+    expired_at: dt.datetime | None = None
+    correlation_id: str | None = None
+
+
+def build_plan_envelope(
+    *,
+    plan_id: str,
+    name: str,
+    description: str | None = None,
+    created_by: str,
+    created_at: dt.datetime,
+    archived_at: dt.datetime | None = None,
+    archived_by: str | None = None,
+    wave_count: int = 0,
+    correlation_id: str | None = None,
+) -> PlanEnvelope:
+    return PlanEnvelope(
+        id=plan_id,
+        name=name,
+        description=description,
+        created_by=created_by,
+        created_at=created_at,
+        archived_at=archived_at,
+        archived_by=archived_by,
+        wave_count=wave_count,
+        correlation_id=correlation_id or get_correlation_id(),
+    )
+
+
+def build_wave_envelope(
+    *,
+    wave_id: str,
+    plan_id: str,
+    name: str,
+    state: WaveStateLiteral,
+    target_version: str,
+    target_platform_family: str,
+    change_window_start: dt.datetime,
+    change_window_end: dt.datetime,
+    drafted_by: str,
+    drafted_at: dt.datetime,
+    submitted_by: str | None = None,
+    submitted_at: dt.datetime | None = None,
+    approved_by: str | None = None,
+    approved_at: dt.datetime | None = None,
+    approval_citation: str | None = None,
+    rejected_by: str | None = None,
+    rejected_at: dt.datetime | None = None,
+    rejection_citation: str | None = None,
+    cancelled_by: str | None = None,
+    cancelled_at: dt.datetime | None = None,
+    cancellation_reason: str | None = None,
+    invalidated_at: dt.datetime | None = None,
+    invalidated_reason: str | None = None,
+    devices: list[WaveDeviceEntry] | None = None,
+    skipped_devices: list[dict[str, Any]] | None = None,
+    recommended_actions: list[RecommendedAction] | None = None,
+    idempotency_key: str | None = None,
+    correlation_id: str | None = None,
+) -> WaveEnvelope:
+    devices_list = devices or []
+    return WaveEnvelope(
+        id=wave_id,
+        plan_id=plan_id,
+        name=name,
+        state=state,
+        target_version=target_version,
+        target_platform_family=target_platform_family,
+        change_window_start=change_window_start,
+        change_window_end=change_window_end,
+        drafted_by=drafted_by,
+        drafted_at=drafted_at,
+        submitted_by=submitted_by,
+        submitted_at=submitted_at,
+        approved_by=approved_by,
+        approved_at=approved_at,
+        approval_citation=approval_citation,
+        rejected_by=rejected_by,
+        rejected_at=rejected_at,
+        rejection_citation=rejection_citation,
+        cancelled_by=cancelled_by,
+        cancelled_at=cancelled_at,
+        cancellation_reason=cancellation_reason,
+        invalidated_at=invalidated_at,
+        invalidated_reason=invalidated_reason,
+        devices=devices_list,
+        device_count=len(devices_list),
+        skipped_devices=skipped_devices or [],
+        recommended_actions=recommended_actions or [],
+        idempotency_key=idempotency_key,
+        correlation_id=correlation_id or get_correlation_id(),
+    )
+
+
+def build_exception_envelope(
+    *,
+    exception_id: str,
+    device_id: str,
+    state: ExceptionStateLiteral,
+    blocker_rule_id: str | None = None,
+    blocker_rule_name: str | None = None,
+    synthetic_kind: BlockerPredicateKind | None = None,
+    justification: str,
+    expires_at: dt.datetime,
+    filed_by: str,
+    filed_at: dt.datetime,
+    approved_by: str | None = None,
+    approved_at: dt.datetime | None = None,
+    rejected_by: str | None = None,
+    rejected_at: dt.datetime | None = None,
+    withdrawn_by: str | None = None,
+    withdrawn_at: dt.datetime | None = None,
+    expired_at: dt.datetime | None = None,
+    correlation_id: str | None = None,
+) -> ExceptionEnvelope:
+    return ExceptionEnvelope(
+        id=exception_id,
+        device_id=device_id,
+        state=state,
+        blocker_rule_id=blocker_rule_id,
+        blocker_rule_name=blocker_rule_name,
+        synthetic_kind=synthetic_kind,
+        justification=justification,
+        expires_at=expires_at,
+        filed_by=filed_by,
+        filed_at=filed_at,
+        approved_by=approved_by,
+        approved_at=approved_at,
+        rejected_by=rejected_by,
+        rejected_at=rejected_at,
+        withdrawn_by=withdrawn_by,
+        withdrawn_at=withdrawn_at,
+        expired_at=expired_at,
         correlation_id=correlation_id or get_correlation_id(),
     )

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import datetime as dt
 import subprocess
+import uuid
 from collections.abc import Callable
 from contextlib import AbstractContextManager as ContextManager
 from dataclasses import dataclass, field
@@ -447,6 +448,7 @@ def _reevaluate_compliance_post_reload(
         compliance_controller,
         compliance_evaluation_controller,
         readiness_evaluation_controller,
+        uplift_wave_controller,
     )
 
     target_deltas = [d for d in report.deltas if d.kind == "target" and d.action != "unchanged"]
@@ -568,6 +570,24 @@ def _reevaluate_compliance_post_reload(
                 error=str(exc),
             )
         count += 1
+
+    # F5 (R-5): once F4 has re-verdicted every affected device, invalidate
+    # any non-terminal wave that contains one of them. The wave controller
+    # decides per-wave whether the reason is `target_retired` (the wave's
+    # target_version is no longer live) or `f4_reverdict`. Wrapped so an
+    # F5-side failure never breaks the reload pipeline (ADR-0011 §8).
+    try:
+        uplift_wave_controller.invalidate_affected_waves(
+            session,
+            audit_session,
+            affected_device_ids={did for did in affected if isinstance(did, uuid.UUID)},
+            actor=actor,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        _log.warning(
+            "firmware_catalog.f5_invalidate_failed",
+            error=str(exc),
+        )
 
     _log.info(
         "firmware_catalog.post_reload_reevaluated",

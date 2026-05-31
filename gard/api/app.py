@@ -169,6 +169,8 @@ _PHASE3_ROUTERS: tuple[str, ...] = (
     "compliance",
     # F4 (004-readiness-prerequisites):
     "readiness",
+    # F5 (005-uplift-planning-waves):
+    "uplift",
 )
 
 

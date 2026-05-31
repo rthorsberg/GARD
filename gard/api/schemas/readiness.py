@@ -47,6 +47,12 @@ RecommendedActionKind = Literal[
     "license_acquire",
     "firmware_intermediate_step",
     "import_observation",
+    # F5 (uplift planning & waves) additions (data-model.md §2.4):
+    "submit_for_approval",
+    "assign_approver",
+    "extend_change_window",
+    "request_exception_review",
+    "cancel_wave",
 ]
 
 ReasonKind = Literal[
@@ -62,6 +68,9 @@ ReasonKind = Literal[
     "stale_observation",
     "missing_upgrade_path",
     "package_not_built",
+    # F5: surfaced when an approved-and-active exception flips the
+    # readiness verdict to `not_applicable` (ADR-0016 §C).
+    "active_exception",
 ]
 
 

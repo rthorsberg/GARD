@@ -44,10 +44,28 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(HTTPException)
     async def _http_exc(_: Request, exc: HTTPException) -> JSONResponse:
+        # Honour a pre-shaped error envelope when a route raises
+        # ``HTTPException(detail={"error": {"code": ..., "message": ...}})``.
+        # This lets routes surface a domain-specific code (e.g.
+        # ``EMPTY_WAVE``, ``WAVE_STATE_MISMATCH``) instead of the generic
+        # ``http_<status>`` while keeping plain-string details working.
+        detail = exc.detail
+        if (
+            isinstance(detail, dict)
+            and isinstance(detail.get("error"), dict)
+            and "code" in detail["error"]
+        ):
+            err = detail["error"]
+            return _render(
+                status_code=exc.status_code,
+                code=str(err.get("code")),
+                message=str(err.get("message", "")),
+                details=err.get("details"),
+            )
         return _render(
             status_code=exc.status_code,
             code=f"http_{exc.status_code}",
-            message=str(exc.detail or ""),
+            message=str(detail or ""),
         )
 
     @app.exception_handler(RequestValidationError)

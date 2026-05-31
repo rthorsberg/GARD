@@ -96,3 +96,29 @@ class Role(enum.StrEnum):
     lifecycle_manager = "lifecycle_manager"
     mcp_client = "mcp_client"
     system_admin = "system_admin"
+    # F5: pure-approval authority. An org may want change-management
+    # approvers who can sign off on uplift waves and exceptions WITHOUT
+    # also getting DB-superuser-equivalent permissions (token mgmt,
+    # MCP tool registration, etc.) that system_admin carries.
+    change_approver = "change_approver"
+
+
+class WaveState(enum.StrEnum):
+    """F5 uplift-wave lifecycle (ADR-0016 §A)."""
+
+    draft = "draft"
+    submitted = "submitted"
+    approved = "approved"
+    rejected = "rejected"
+    cancelled = "cancelled"
+    invalidated = "invalidated"
+
+
+class ExceptionState(enum.StrEnum):
+    """F5 exception lifecycle (ADR-0016 §C)."""
+
+    pending_review = "pending_review"
+    approved = "approved"
+    rejected = "rejected"
+    expired = "expired"
+    withdrawn = "withdrawn"
