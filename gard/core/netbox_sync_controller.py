@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -29,7 +30,7 @@ from gard.models._enums import AuditResult, EvidenceType, LifecycleState, Netbox
 class NetboxAmbiguousIdentity(Exception):  # noqa: N818
     """Duplicate serial in NetBox or two NetBox rows match one GARD device."""
 
-    def __init__(self, message: str, *, details: list[dict[str, object]]) -> None:
+    def __init__(self, message: str, *, details: list[dict[str, Any]]) -> None:
         super().__init__(message)
         self.details = details
 
