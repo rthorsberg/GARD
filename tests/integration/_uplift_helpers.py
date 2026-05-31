@@ -14,7 +14,13 @@ import uuid
 from sqlalchemy.orm import Session
 
 from gard.core.tokens import issue_token
-from gard.models import Device, FirmwareTarget, ReadinessEvaluation
+from gard.models import (
+    ComplianceEvaluation,
+    Device,
+    FirmwarePrerequisiteRule,
+    FirmwareTarget,
+    ReadinessEvaluation,
+)
 from gard.models._enums import LifecycleState, Role
 
 
@@ -109,6 +115,128 @@ def make_readiness(
     session.add(row)
     session.flush()
     return row
+
+
+def future_expiry(*, days: int = 30) -> str:
+    return (dt.datetime.now(dt.UTC) + dt.timedelta(days=days)).isoformat()
+
+
+def make_prereq_rule(
+    session: Session,
+    *,
+    name: str = "min-ram-rule",
+    predicate_kind: str = "min_ram_mb",
+) -> FirmwarePrerequisiteRule:
+    rule = FirmwarePrerequisiteRule(
+        name=name,
+        applies_to={"platform_family": "acme-os"},
+        predicate_kind=predicate_kind,
+        predicate_args={"min_ram_mb": 8192},
+        severity="required",
+        source_file_relpath="prereqs/min-ram.yaml",
+        catalog_schema_version="1.0",
+    )
+    session.add(rule)
+    session.flush()
+    return rule
+
+
+def make_compliance(
+    session: Session,
+    *,
+    device: Device,
+    state: str = "outside_target",
+    target_version: str = "9.0.0",
+    observed_version: str = "8.1.0",
+) -> ComplianceEvaluation:
+    row = ComplianceEvaluation(
+        device_id=device.id,
+        compliance_state=state,
+        target_version=target_version,
+        observed_version=observed_version,
+        primary_drift_type="target_drift" if state == "outside_target" else None,
+        reasons=[],
+        recommended_actions=[],
+        confidence=decimal.Decimal("1.00"),
+        evaluated_at=dt.datetime.now(dt.UTC),
+        correlation_id="test-corr",
+        actor="test",
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def make_blocked_device(
+    session: Session,
+    *,
+    hostname: str = "blocked.oslo",
+    rule: FirmwarePrerequisiteRule | None = None,
+    synthetic_kind: str | None = None,
+) -> tuple[Device, uuid.UUID | None, str | None]:
+    """Seed blocked device + F3/F4 rows. Returns (device, rule_id, synthetic_kind)."""
+    make_live_target(session, target_version="9.0.0")
+    device = make_device(
+        session,
+        hostname=hostname,
+        lifecycle_state=LifecycleState.blocked,
+    )
+    make_compliance(session, device=device, state="outside_target")
+    blockers: list[dict]
+    rule_id: uuid.UUID | None = None
+    syn: str | None = synthetic_kind
+    if synthetic_kind is not None:
+        blockers = [
+            {
+                "rule_id": None,
+                "rule_name": None,
+                "predicate_kind": synthetic_kind,
+                "severity": "required",
+                "required": {"field": "ram_mb"},
+                "observed": None,
+                "detail": f"synthetic blocker {synthetic_kind}",
+            }
+        ]
+    else:
+        rule = rule or make_prereq_rule(session)
+        rule_id = rule.id
+        blockers = [
+            {
+                "rule_id": str(rule.id),
+                "rule_name": rule.name,
+                "predicate_kind": rule.predicate_kind,
+                "severity": "required",
+                "required": rule.predicate_args,
+                "observed": {"ram_mb": 4096},
+                "detail": "insufficient RAM for uplift",
+            }
+        ]
+    make_readiness(
+        session,
+        device=device,
+        state="blocked",
+        blockers=blockers,
+    )
+    return device, rule_id, syn
+
+
+def file_exception_payload(
+    *,
+    device_id: uuid.UUID,
+    blocker_rule_id: uuid.UUID | None = None,
+    synthetic_kind: str | None = None,
+    expires_at: str | None = None,
+) -> dict:
+    body: dict = {
+        "device_id": str(device_id),
+        "justification": "Accepted known risk for end-of-life hardware in this site.",
+        "expires_at": expires_at or future_expiry(days=30),
+    }
+    if blocker_rule_id is not None:
+        body["blocker_rule_id"] = str(blocker_rule_id)
+    if synthetic_kind is not None:
+        body["synthetic_kind"] = synthetic_kind
+    return body
 
 
 def future_window(

@@ -246,6 +246,96 @@ def _apply_state_guard(
     return refreshed
 
 
+@dataclass(frozen=True, slots=True)
+class WaveDraftPreview:
+    """Read-shaped wave draft proposal (R-9) — no DB writes."""
+
+    proposed_devices: int
+    skipped: list[SkippedDevice]
+    device_rows: list[dict[str, object]]
+    change_window_valid: bool
+    target_version_live: bool
+    warnings: list[str]
+
+
+def preview_wave_draft(
+    session: Session,
+    *,
+    target_version: str,
+    target_platform_family: str,
+    scope_selector: dict[str, object],
+    mode: str,
+    change_window_start: dt.datetime,
+    change_window_end: dt.datetime,
+) -> WaveDraftPreview:
+    """Resolve scope against F4 verdicts without persisting (R-9)."""
+    warnings: list[str] = []
+    change_window_valid = True
+    target_version_live = True
+    try:
+        _validate_change_window(change_window_start, change_window_end)
+    except InvalidChangeWindow as exc:
+        change_window_valid = False
+        warnings.append(str(exc))
+    try:
+        _assert_target_live(
+            session,
+            platform_family=target_platform_family,
+            target_version=target_version,
+        )
+    except TargetVersionNotLive as exc:
+        target_version_live = False
+        warnings.append(str(exc))
+
+    sel.validate_keys(scope_selector)
+    devices = list(session.scalars(select(Device)))
+
+    eligible: list[tuple[Device, ReadinessEvaluation | None]] = []
+    skipped: list[SkippedDevice] = []
+    for device in devices:
+        if not sel.evaluate(scope_selector, _device_facts(device)).matched:
+            continue
+        latest = _latest_readiness(session, device.id)
+        state = latest.readiness_state if latest is not None else None
+        if state == "ready_for_uplift":
+            eligible.append((device, latest))
+        else:
+            skipped.append(
+                SkippedDevice(
+                    device_id=device.id,
+                    reason="not ready_for_uplift",
+                    current_readiness_state=state,
+                )
+            )
+
+    if mode == "strict" and skipped:
+        warnings.append(f"{len(skipped)} ineligible device(s) in scope (mode=strict)")
+    if not eligible:
+        warnings.append("scope resolved to zero ready_for_uplift devices")
+
+    eligible.sort(key=lambda pair: str(pair[0].id))
+    device_rows: list[dict[str, object]] = []
+    for device, latest in eligible:
+        device_rows.append(
+            {
+                "device_id": str(device.id),
+                "hostname": device.hostname,
+                "readiness_state": latest.readiness_state if latest else None,
+                "target_version": latest.target_version if latest else None,
+                "observed_version": latest.observed_version if latest else None,
+            }
+        )
+
+    return WaveDraftPreview(
+        proposed_devices=len(eligible),
+        skipped=skipped if mode != "strict" else [],
+        device_rows=device_rows,
+        change_window_valid=change_window_valid,
+        target_version_live=target_version_live,
+        warnings=warnings,
+    )
+
+
 # ---- draft (T022-T023) ---------------------------------------------------
 
 
@@ -767,6 +857,7 @@ __all__ = [
     "SkippedDevice",
     "TargetVersionNotLive",
     "WaveDraftOutcome",
+    "WaveDraftPreview",
     "WaveNotFound",
     "WaveStateMismatch",
     "WaveTooLarge",
@@ -777,6 +868,7 @@ __all__ = [
     "invalidate_affected_waves",
     "list_waves",
     "load_wave_members",
+    "preview_wave_draft",
     "reject",
     "submit",
 ]

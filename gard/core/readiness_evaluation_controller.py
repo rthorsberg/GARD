@@ -55,6 +55,7 @@ from gard.core import (
     scope_selector,
     upgrade_path_graph,
 )
+from gard.core import uplift_exception_controller as exc_ctrl
 from gard.core.audit import emit as audit_emit
 from gard.core.envelope import (
     Blocker,
@@ -387,6 +388,15 @@ def evaluate(
     now = dt.datetime.now(dt.UTC)
     correlation_id = get_correlation_id() or "unknown"
 
+    # 0. Lazy exception expiry (R-6 / ADR-0016 §C) -----------------------
+    exc_ctrl.expire_overdue_exceptions(
+        session=session,
+        audit_session=audit_session,
+        device_id=device_id,
+        actor=actor,
+        actor_type=actor_type,
+    )
+
     # 1. Latest F3 row + staleness check ---------------------------------
     f3_row = f3_controller.latest_evaluation_for(session, device_id)
     if f3_row is None:
@@ -428,6 +438,21 @@ def evaluate(
             reason_detail=(
                 f"latest compliance_state={f3_row.compliance_state!r}; readiness not applicable"
             ),
+            f3_row=f3_row,
+            now=now,
+            correlation_id=correlation_id,
+            actor=actor,
+            actor_type=actor_type,
+        )
+
+    # 2.5 Active exception carve-out (ADR-0016 §C / FR-012) --------------
+    active_exc = exc_ctrl.find_active_approved_exception(session, device_id, now=now)
+    if active_exc is not None:
+        return _emit_active_exception(
+            session=session,
+            audit_session=audit_session,
+            device=device,
+            exception_id=active_exc.id,
             f3_row=f3_row,
             now=now,
             correlation_id=correlation_id,
@@ -597,6 +622,105 @@ def evaluate(
         readiness_state=state,
         blocker_count=len(blockers),
         evaluation_id=str(row.id),
+    )
+
+    return ReadinessOutcome(
+        envelope=envelope,
+        evaluation_id=row.id,
+        state_changed=True,
+    )
+
+
+def _emit_active_exception(
+    *,
+    session: Session,
+    audit_session: Session,
+    device: Device,
+    exception_id: uuid.UUID,
+    f3_row: ComplianceEvaluation,
+    now: dt.datetime,
+    correlation_id: str,
+    actor: str,
+    actor_type: ActorType,
+) -> ReadinessOutcome:
+    """Carve-out: approved active exception → ``not_applicable`` (FR-012)."""
+    reason = ComplianceReason(
+        kind="active_exception",
+        ref_type="UpliftException",
+        ref_id=str(exception_id),
+        detail="device has an approved active exception",
+    )
+    reason_json = reason.model_dump(mode="json")
+
+    envelope = build_readiness_envelope(
+        state="not_applicable",
+        summary="readiness is not applicable for this device",
+        target_version=f3_row.target_version,
+        observed_version=f3_row.observed_version,
+        upgrade_path_exists=False,
+        applicable_rules_count=0,
+        blockers=[],
+        recommended_actions=[],
+        reasons=[reason],
+        compliance_evaluation_ref=str(f3_row.id),
+        confidence=1.0,
+        evaluated_at=now,
+        correlation_id=correlation_id,
+    )
+
+    prev = _latest_readiness(session, device.id)
+    if (
+        prev is not None
+        and prev.readiness_state == "not_applicable"
+        and not prev.blockers
+        and (prev.reasons or []) == [reason_json]
+    ):
+        envelope.evaluation_id = str(prev.id)
+        return ReadinessOutcome(
+            envelope=envelope,
+            evaluation_id=None,
+            state_changed=False,
+        )
+
+    row = ReadinessEvaluation(
+        device_id=device.id,
+        compliance_evaluation_ref=f3_row.id,
+        readiness_state="not_applicable",
+        target_version=f3_row.target_version,
+        observed_version=f3_row.observed_version,
+        upgrade_path_exists=False,
+        applicable_rules_count=0,
+        blockers=[],
+        recommended_actions=[],
+        reasons=[reason_json],
+        confidence=decimal.Decimal("1.00"),
+        evaluated_at=now,
+        correlation_id=correlation_id,
+        actor=actor,
+    )
+    session.add(row)
+    session.flush()
+    envelope.evaluation_id = str(row.id)
+
+    audit_emit(
+        session=audit_session,
+        action="readiness.evaluated",
+        object_type="Device",
+        object_id=str(device.id),
+        actor=actor,
+        actor_type=actor_type,
+        before={
+            "readiness_state": prev.readiness_state if prev is not None else None,
+            "lifecycle_state": device.lifecycle_state.value,
+        },
+        after={
+            "device_id": str(device.id),
+            "readiness_state": "not_applicable",
+            "reason_kind": "active_exception",
+            "exception_id": str(exception_id),
+            "evaluation_id": str(row.id),
+        },
+        correlation_id=correlation_id,
     )
 
     return ReadinessOutcome(

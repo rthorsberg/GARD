@@ -75,33 +75,33 @@ Status convention: `[ ]` pending · `[x]` done · `[~]` in progress.
 - [x] **T055** — Integration test — invalidation returns devices to `ready_for_uplift` (or `blocked` if F4 reverdicts).
 - [x] **T056** — Lifecycle transition correctness: device delete attempt on a member of a non-terminal wave → 409 `DEVICE_IN_OPEN_WAVE` (smoke this at the controller level; full endpoint test deferred to device-decommission feature).
 - [x] **T057** — Slice 5b commit + push; mark PR ready.
-- [ ] **T058** — Slice 5b merge to `005-uplift-planning-waves` long-running branch.
+- [x] **T058** — Slice 5b merge to `005-uplift-planning-waves` long-running branch.
 
 ## Phase 6 — US3: exceptions (slice 5c)
 
-- [ ] **T059** — `gard/core/uplift_exception_controller.py` — `file_exception()` validating device is `blocked` and matching blocker exists in the latest F4 row.
-- [ ] **T060** — `approve_exception()` — SoD check; flips device `blocked → exception_approved`; emits `uplift_exception.approved`.
-- [ ] **T061** — `reject_exception()` + `withdraw_exception()`.
-- [ ] **T062** — Lazy expiry sweep — extend `readiness_evaluation_controller.evaluate()` to call `expire_overdue_exceptions(device_id)` at the top; transitions any matching approved-and-expired row to `expired`; emits audit; F4 then evaluates without the exception in play.
-- [ ] **T063** — Extend `readiness_evaluation_controller` carve-out logic to surface `state=not_applicable, reasons=[{kind: active_exception, ref_id: <id>}]` when an active exception exists.
-- [ ] **T064** — `gard/api/routers/uplift.py` — endpoints for `/uplift/exceptions` GET/POST + `/uplift/exceptions/{id}/{approve,reject,withdraw}`.
-- [ ] **T065** — Integration test happy path: blocked device → file exception → second principal approves → F4 reports `not_applicable`.
-- [ ] **T066** — Integration test expiry: file + approve with `expires_at = now() + 1s`; sleep; trigger F4 evaluate; assert device returns to `blocked` + audit `uplift_exception.expired`.
-- [ ] **T067** — Integration test second exception for same (device, blocker) while first is active → 409 `EXCEPTION_ALREADY_ACTIVE`.
-- [ ] **T068** — Integration test justification length bounds (< 20, > 2000).
-- [ ] **T069** — Integration test SoD on exception approval (filer == approver → 403).
-- [ ] **T070** — Integration test exception withdrawal by filer (allowed in any non-terminal state).
-- [ ] **T071** — Integration test synthetic blocker exception (no `blocker_rule_id`, only `synthetic_kind`).
-- [ ] **T072** — Verify F4 audit chain still works correctly when exception cancels out blocker.
+- [x] **T059** — `gard/core/uplift_exception_controller.py` — `file_exception()` validating device is `blocked` and matching blocker exists in the latest F4 row.
+- [x] **T060** — `approve_exception()` — SoD check; flips device `blocked → exception_approved`; emits `uplift_exception.approved`.
+- [x] **T061** — `reject_exception()` + `withdraw_exception()`.
+- [x] **T062** — Lazy expiry sweep — extend `readiness_evaluation_controller.evaluate()` to call `expire_overdue_exceptions(device_id)` at the top; transitions any matching approved-and-expired row to `expired`; emits audit; F4 then evaluates without the exception in play.
+- [x] **T063** — Extend `readiness_evaluation_controller` carve-out logic to surface `state=not_applicable, reasons=[{kind: active_exception, ref_id: <id>}]` when an active exception exists.
+- [x] **T064** — `gard/api/routers/uplift.py` — endpoints for `/uplift/exceptions` GET/POST + `/uplift/exceptions/{id}/{approve,reject,withdraw}`.
+- [x] **T065** — Integration test happy path: blocked device → file exception → second principal approves → F4 reports `not_applicable`.
+- [x] **T066** — Integration test expiry: file + approve with `expires_at = now() + 1s`; sleep; trigger F4 evaluate; assert device returns to `blocked` + audit `uplift_exception.expired`.
+- [x] **T067** — Integration test second exception for same (device, blocker) while first is active → 409 `EXCEPTION_ALREADY_ACTIVE`.
+- [x] **T068** — Integration test justification length bounds (< 20, > 2000).
+- [x] **T069** — Integration test SoD on exception approval (filer == approver → 403).
+- [x] **T070** — Integration test exception withdrawal by filer (allowed in any non-terminal state).
+- [x] **T071** — Integration test synthetic blocker exception (no `blocker_rule_id`, only `synthetic_kind`).
+- [x] **T072** — Verify F4 audit chain still works correctly when exception cancels out blocker.
 
 ## Phase 7 — US4: MCP delegates (slice 5c)
 
-- [ ] **T073** — `gard/mcp/tools/create_uplift_wave_draft.py` — read-shaped proposal (R-9); no DB write.
-- [ ] **T074** — `gard/mcp/tools/create_exception_review_draft.py`.
-- [ ] **T075** — `gard/mcp/tools/get_uplift_plan_summary.py`.
-- [ ] **T076** — `gard/mcp/tools/list_open_waves.py`.
-- [ ] **T077** — `gard/mcp/tools/list_active_exceptions.py` + `gard/mcp/tools/explain_wave.py`.
-- [ ] **T078** — Contract test `tests/contract/test_uplift_mcp_tools.py` — load `contracts/mcp-tools.yaml`, assert each of the 6 delegates exists with matching `TOOL_NAME` + `REQUIRED_PERMISSION` + `invoke()`.
+- [x] **T073** — `gard/mcp/tools/create_uplift_wave_draft.py` — read-shaped proposal (R-9); no DB write.
+- [x] **T074** — `gard/mcp/tools/create_exception_review_draft.py`.
+- [x] **T075** — `gard/mcp/tools/get_uplift_plan_summary.py`.
+- [x] **T076** — `gard/mcp/tools/list_open_waves.py`.
+- [x] **T077** — `gard/mcp/tools/list_active_exceptions.py` + `gard/mcp/tools/explain_wave.py`.
+- [x] **T078** — Contract test `tests/contract/test_uplift_mcp_tools.py` — load `contracts/mcp-tools.yaml`, assert each of the 6 delegates exists with matching `TOOL_NAME` + `REQUIRED_PERMISSION` + `invoke()`.
 
 ## Phase 8 — Contract lock (slice 5d)
 

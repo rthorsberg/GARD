@@ -33,8 +33,11 @@ from gard.api.middleware.rbac import require
 from gard.api.schemas.uplift import (
     ApproveRequest,
     CancelRequest,
+    CreateExceptionRequest,
     CreatePlanRequest,
     CreateWaveRequest,
+    ExceptionEnvelope,
+    ExceptionList,
     PlanEnvelope,
     PlanList,
     RejectRequest,
@@ -43,6 +46,7 @@ from gard.api.schemas.uplift import (
     WaveEnvelope,
     WaveList,
 )
+from gard.core import uplift_exception_controller as exc_ctrl
 from gard.core import uplift_plan_controller as plan_ctrl
 from gard.core import uplift_state_machine as sm
 from gard.core import uplift_wave_controller as wave_ctrl
@@ -50,7 +54,7 @@ from gard.core.audit import emit as audit_emit
 from gard.core.logging import get_correlation_id, get_logger
 from gard.core.rbac import Permission, Principal
 from gard.db.session import get_append_only_session, get_session
-from gard.models import Device, UpliftPlan, UpliftWave, UpliftWaveDevice
+from gard.models import Device, UpliftException, UpliftPlan, UpliftWave, UpliftWaveDevice
 from gard.models._enums import ActorType
 
 router = APIRouter(prefix="/api/v1", tags=["uplift"])
@@ -497,3 +501,189 @@ def cancel_wave(
     except (sm.StateMachineError, wave_ctrl.WaveStateMismatch) as exc:
         raise _map_transition_error(exc) from exc
     return _wave_envelope(wave, wave_ctrl.load_wave_members(session, wave_id))
+
+
+# ---- exception endpoints (slice 5c) --------------------------------------
+
+
+def _exception_envelope(exc: UpliftException) -> ExceptionEnvelope:
+    return ExceptionEnvelope(
+        id=str(exc.id),
+        device_id=str(exc.device_id),
+        blocker_rule_id=str(exc.blocker_rule_id) if exc.blocker_rule_id else None,
+        synthetic_kind=exc.synthetic_kind,
+        justification=exc.justification,
+        state=exc.state,  # type: ignore[arg-type]
+        filed_by=exc.filed_by,
+        filed_at=exc.filed_at,
+        approved_by=exc.approved_by,
+        approved_at=exc.approved_at,
+        rejected_by=exc.rejected_by,
+        rejected_at=exc.rejected_at,
+        withdrawn_by=exc.withdrawn_by,
+        withdrawn_at=exc.withdrawn_at,
+        expires_at=exc.expires_at,
+        expired_at=exc.expired_at,
+        correlation_id=exc.correlation_id or get_correlation_id() or "unknown",
+    )
+
+
+def _map_exception_transition_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, sm.SelfApprovalForbidden):
+        return _err(403, "SELF_APPROVAL_FORBIDDEN", str(exc))
+    if isinstance(exc, sm.TransitionForbidden | sm.ActorKindForbidden):
+        return _err(409, "EXCEPTION_TRANSITION_FORBIDDEN", str(exc))
+    if isinstance(exc, exc_ctrl.ExceptionStateMismatch):
+        return _err(
+            409,
+            "EXCEPTION_STATE_MISMATCH",
+            str(exc),
+            {"expected": exc.expected, "actual": exc.actual},
+        )
+    raise exc  # pragma: no cover
+
+
+@router.get("/uplift/exceptions", response_model=ExceptionList)
+def list_exceptions(
+    device_id: uuid.UUID | None = None,
+    state: str | None = None,
+    limit: int = Query(default=50, ge=1, le=500),
+    page_token: str | None = None,
+    principal: Principal = Depends(require(Permission.READ_UPLIFT)),
+    session: Session = Depends(get_session),
+    audit_session: Session = Depends(get_append_only_session),
+) -> ExceptionList:
+    page = exc_ctrl.list_exceptions(
+        session,
+        device_id=device_id,
+        state=state,
+        limit=limit,
+        after_id=_decode_token(page_token),
+    )
+    audit_emit(
+        session=audit_session,
+        action="uplift_exception.read",
+        object_type="UpliftException",
+        object_id="list",
+        actor=principal.subject,
+        actor_type=ActorType(principal.actor_type),
+        before=None,
+        after={"count": len(page.exceptions), "device_id": str(device_id) if device_id else None},
+        correlation_id=get_correlation_id(),
+    )
+    items = [_exception_envelope(e) for e in page.exceptions]
+    return ExceptionList(
+        items=items,
+        total_returned=len(items),
+        next_page_token=_encode_token(page.next_after_id) if page.next_after_id else None,
+    )
+
+
+@router.post("/uplift/exceptions", response_model=ExceptionEnvelope, status_code=201)
+def create_exception(
+    body: CreateExceptionRequest,
+    principal: Principal = Depends(require(Permission.MANAGE_EXCEPTION)),
+    session: Session = Depends(get_session),
+    audit_session: Session = Depends(get_append_only_session),
+) -> ExceptionEnvelope:
+    try:
+        row = exc_ctrl.file_exception(
+            session=session,
+            audit_session=audit_session,
+            device_id=body.device_id,
+            blocker_rule_id=body.blocker_rule_id,
+            synthetic_kind=body.synthetic_kind,
+            justification=body.justification,
+            expires_at=body.expires_at,
+            actor=principal.subject,
+            actor_type=ActorType(principal.actor_type),
+        )
+    except exc_ctrl.DeviceNotBlocked as err:
+        raise _err(422, "DEVICE_NOT_BLOCKED", str(err)) from err
+    except exc_ctrl.BlockerNotInLatestVerdict as err:
+        raise _err(422, "BLOCKER_NOT_IN_LATEST_VERDICT", str(err)) from err
+    except exc_ctrl.InvalidExceptionExpiry as err:
+        raise _err(422, "INVALID_EXCEPTION_EXPIRY", str(err)) from err
+    except exc_ctrl.ExceptionAlreadyActive as err:
+        raise _err(
+            409,
+            "EXCEPTION_ALREADY_ACTIVE",
+            str(err),
+            {"existing_exception_id": str(err.existing_id)},
+        ) from err
+    return _exception_envelope(row)
+
+
+@router.post("/uplift/exceptions/{exception_id}/approve", response_model=ExceptionEnvelope)
+def approve_exception(
+    exception_id: uuid.UUID,
+    principal: Principal = Depends(require(Permission.APPROVE_EXCEPTION)),
+    session: Session = Depends(get_session),
+    audit_session: Session = Depends(get_append_only_session),
+) -> ExceptionEnvelope:
+    try:
+        row = exc_ctrl.approve_exception(
+            session=session,
+            audit_session=audit_session,
+            exception_id=exception_id,
+            actor=principal.subject,
+            actor_type=ActorType(principal.actor_type),
+        )
+    except exc_ctrl.ExceptionNotFound as err:
+        raise _err(404, "EXCEPTION_NOT_FOUND", str(err)) from err
+    except exc_ctrl.DeviceNotBlocked as err:
+        raise _err(422, "DEVICE_NOT_BLOCKED", str(err)) from err
+    except (sm.StateMachineError, exc_ctrl.ExceptionStateMismatch) as err:
+        raise _map_exception_transition_error(err) from err
+    return _exception_envelope(row)
+
+
+@router.post("/uplift/exceptions/{exception_id}/reject", response_model=ExceptionEnvelope)
+def reject_exception(
+    exception_id: uuid.UUID,
+    principal: Principal = Depends(require(Permission.APPROVE_EXCEPTION)),
+    session: Session = Depends(get_session),
+    audit_session: Session = Depends(get_append_only_session),
+) -> ExceptionEnvelope:
+    try:
+        row = exc_ctrl.reject_exception(
+            session=session,
+            audit_session=audit_session,
+            exception_id=exception_id,
+            actor=principal.subject,
+            actor_type=ActorType(principal.actor_type),
+        )
+    except exc_ctrl.ExceptionNotFound as err:
+        raise _err(404, "EXCEPTION_NOT_FOUND", str(err)) from err
+    except (sm.StateMachineError, exc_ctrl.ExceptionStateMismatch) as err:
+        raise _map_exception_transition_error(err) from err
+    return _exception_envelope(row)
+
+
+@router.post("/uplift/exceptions/{exception_id}/withdraw", response_model=ExceptionEnvelope)
+def withdraw_exception(
+    exception_id: uuid.UUID,
+    principal: Principal = Depends(get_principal),
+    session: Session = Depends(get_session),
+    audit_session: Session = Depends(get_append_only_session),
+) -> ExceptionEnvelope:
+    exc_row = exc_ctrl.get_exception(session, exception_id)
+    if exc_row is None:
+        raise _err(404, "EXCEPTION_NOT_FOUND", f"exception not found: {exception_id}")
+    if principal.subject != exc_row.filed_by and not principal.has(Permission.MANAGE_EXCEPTION):
+        raise _err(
+            403,
+            "FORBIDDEN",
+            "withdrawal requires being the filer or holding uplift.exception.manage",
+        )
+    try:
+        row = exc_ctrl.withdraw_exception(
+            session=session,
+            audit_session=audit_session,
+            exception_id=exception_id,
+            actor=principal.subject,
+            actor_type=ActorType(principal.actor_type),
+        )
+    except (sm.StateMachineError, exc_ctrl.ExceptionStateMismatch) as err:
+        raise _map_exception_transition_error(err) from err
+    return _exception_envelope(row)
