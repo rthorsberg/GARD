@@ -58,12 +58,22 @@ export GARD_NETBOX_TOKEN=<token-from-that-instance>
 
 No need to start `gard-f7-netbox` at all.
 
-## After F7 implementation lands
+## After F7 implementation
 
 ```bash
-# Trigger sync (endpoint name from contracts/rest-openapi.yaml)
+export GARD_NETBOX_URL=http://127.0.0.1:18888
+export GARD_NETBOX_TOKEN=<read-only-token>
+export GARD_NETBOX_VERIFY_TLS=false
+
+# Optional: seed NetBox with ISR1121-aligned devices (write token, dev only)
+export NETBOX_SEED_TOKEN=<write-token>
+./deploy/scripts/seed-netbox.sh
+
 curl -X POST -H "Authorization: Bearer $(cat .gard/token.jwt)" \
   http://127.0.0.1:8080/api/v1/integrations/netbox/sync
+
+curl -H "Authorization: Bearer $(cat .gard/token.jwt)" \
+  http://127.0.0.1:8080/api/v1/integrations/netbox/summary
 ```
 
 ## Verify isolation

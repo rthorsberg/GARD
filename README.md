@@ -154,8 +154,9 @@ Complexity Tracking section and be approved before implementation.
   Cisco ISR1121 end-to-end proof: 12 integration tests, ISR1121 catalog,
   `seed-isr1121.sh`.
 - 🚧 **F7 — NetBox Integration (read-only)** on
-  `007-netbox-integration-read`. Pull device identity from NetBox REST;
-  isolated dev stack on port **18888** (`gard-f7-netbox` Docker project).
+  `007-netbox-integration-read` (PR pending). Read-only NetBox REST sync,
+  `tagged_with` evaluable from synced tags, MCP summary delegate; dev NetBox
+  on port **18888** (`gard-f7-netbox`).
 - ⏭️ **Next after F7**: execution adapters / MCP transport (post-v1).
 
 ## Quickstart

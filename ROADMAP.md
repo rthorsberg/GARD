@@ -126,4 +126,4 @@ is [`specs/001-device-import-normalize/README.md`](./specs/001-device-import-nor
 | F4 readiness-prerequisites | — | — | — | — | — | Not started |
 | F5 uplift-planning-waves | `005-uplift-planning-waves` | done | done | done | shipped (PR #5) | Merged to main |
 | F6 mvp-vertical-slice-cisco-isr1121 | `006-mvp-vertical-slice-cisco-isr1121` | done | done | shipped (PR #6) | — | Merged |
-| F7 netbox-integration-read | `007-netbox-integration-read` | done | done | — | — | 7a design + docker |
+| F7 netbox-integration-read | `007-netbox-integration-read` | done | done | in progress | — | 7a–7d landing |

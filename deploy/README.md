@@ -52,6 +52,19 @@ the API. The API's lifespan handler then upserts every YAML rule
 from `gard-catalog/normalization/` into the `normalization_rules`
 table (5 vendor rules at the time of writing).
 
+## Optional NetBox dev stack (F7)
+
+Isolated NetBox for read-only sync testing — **does not** touch other Docker
+projects (including existing NetBox on port 18080):
+
+```bash
+docker compose -p gard-f7-netbox -f deploy/netbox/docker-compose.yml up -d
+./deploy/scripts/seed-netbox.sh   # requires NETBOX_SEED_TOKEN (write, dev only)
+```
+
+See [deploy/netbox/README.md](netbox/README.md) and
+[specs/007-netbox-integration-read/quickstart.md](../specs/007-netbox-integration-read/quickstart.md).
+
 ## Topology
 
 | Service | Image | Role | Port (host) |

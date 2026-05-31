@@ -44,14 +44,11 @@ Status: `[ ]` pending · `[x]` done
 
 ## Phase 5 — US4 MCP (slice 7d)
 
-- [ ] **T027** [US4] MCP delegate `get_netbox_sync_summary`
-- [ ] **T028** [US4] Contract test MCP + OpenAPI
-
-## Phase 6 — Polish
-
-- [ ] **T029** `deploy/scripts/seed-netbox.sh` — optional fixture loader for dev NetBox
-- [ ] **T030** Update `README.md`, `ROADMAP.md`, `deploy/README.md`
-- [ ] **T031** Full pytest + CI green
+- [x] **T027** [US4] MCP delegate `get_netbox_sync_summary`
+- [x] **T028** [US4] Contract test MCP + OpenAPI
+- [x] **T029** `deploy/scripts/seed-netbox.sh` — optional fixture loader for dev NetBox
+- [x] **T030** Update `README.md`, `ROADMAP.md`, `deploy/README.md`
+- [x] **T031** Full pytest + CI green
 - [ ] **T032** PR ready
 
 ## Docker safety (non-negotiable)
