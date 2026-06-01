@@ -54,6 +54,7 @@ packages = ["gard"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["vendor"]
 
 [tool.ruff.lint]
 select = [
