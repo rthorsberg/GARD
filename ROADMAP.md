@@ -36,7 +36,10 @@
 | F4 | Readiness & Prerequisites | `readiness-prerequisites` | **shipped** (PR #4) — REST complete, MCP delegates ready, transport deferred to F008. `ReadinessEvaluation` controller; 11-kind blocker taxonomy (9 F2 prereq kinds + 2 synthetic `missing_upgrade_path` / `missing_observation_field`); R-1 severity+predicate-kind precedence locked in ADR-0015 (hardware > firmware-chain > licence > operational > synthetic); idempotent append-only storage; four REST endpoints (`/readiness/summary`, `/readiness/devices`, `/devices/{id}/readiness`, `/readiness/evaluate`); R-8 stale F3 input → 409 `READINESS_INPUT_STALE`; reload-sync extends F3's hook with set3 (prereq-rule-touched devices). MCP tools `get_readiness_summary`, `list_blocked_devices`, `explain_blockers`, `get_ready_for_uplift_devices` ship as delegates; transport deferred per ADR-0013. | F2, F3 |
 | F5 | Uplift Planning & Waves | `uplift-planning-waves` | **shipped** (PR #5) — dry-run only; ADR-0016 | `UpliftPlan` (dry-run only in v1); `UpliftWave` with approval gates; `Exception` entity; transitions `ready_for_uplift → uplift_planned → approval_pending → approved`. MCP tools: `create_uplift_wave_draft`, `create_exception_review_draft`, and the four reporting tools. | F3, F4 |
 | F6 | MVP Vertical Slice Validation | `mvp-vertical-slice-cisco-isr1121` | **shipped** (PR #6) | Reference end-to-end proof for Cisco ISR1121: all MVP acceptance criteria from `gard-speckit-start/specs/04-mvp-scope.md` checked green. Integration tests, sample data, runbook. Not new product code. | F1–F5 |
-| F7 | NetBox Integration (read-only, ecosystem-aware) | `netbox-integration-read` | **in progress** (`007-netbox-integration-read`) | First-class NetBox identity reference per ADR-0001. Read-only in v1: GARD pulls device identity/inventory from NetBox via the standard NetBox REST API and reconciles it with its own `Device` records. Dev NetBox on isolated Docker project `gard-f7-netbox`, host port **18888**. | F1 |
+| F7 | NetBox Integration (read-only, ecosystem-aware) | `netbox-integration-read` | **shipped** (PR #7) | First-class NetBox identity reference per ADR-0001/0017/0018. Read-only: GARD pulls DCIM devices from NetBox REST, reconciles `Device` rows, populates tags for `tagged_with`, optional dev stack on port **18888** (`gard-f7-netbox`). MCP delegate `get_netbox_sync_summary`; transport deferred to F8. | F1 |
+| F8 | Native MCP Transport | `mcp-transport` | **shipped** (`008-mcp-transport`, PR #8) | Live Streamable HTTP MCP server at `/mcp` with shared JWT/RBAC/audit. Registers all **22** tools from F1–F7 contracts; implements missing F1/F2 delegates. Closes MVP criterion #8 and ADR-0013 transport deferral (ADR-0019). | F1–F7 |
+| F9 | NetBox Device Type Bootstrap | `netbox-devicetype-bootstrap` | **shipped** (`009-netbox-devicetype-bootstrap`, ADR-0020) | Curated import from community device type library for GARD-supported models only (pinned upstream manifest). Replaces hand-rolled dev seed types; prerequisite for NetBox write-back. | F7 |
+| F10 | NetBox Lifecycle Write-Back | `netbox-writeback` | **shipped** (`010-netbox-writeback`, ADR-0021) | Post-sync push of GARD lifecycle metadata (custom fields + tags) to all NetBox-linked devices in sync batch. Conflict-safe, manifest-driven. | F7, F9, F3, F4 |
 
 ## Out of v1 scope
 
@@ -49,7 +52,7 @@ Each becomes its own feature when prioritized:
 - **Full SEGL certificate integration** — v1 has generic `LifecycleEvidence` only.
 - **UI dashboards** — v1 is API + MCP + minimal admin surfaces only.
 - **Closed-loop continuous reconciliation** — v1 is manually triggered evaluation.
-- **NetBox write-back** — read-only in v1 (F7); write-back is a later feature.
+- **NetBox write-back** — F10 shipped (`010-netbox-writeback`, ADR-0021); post-sync lifecycle mirror via custom fields + tags.
 
 ## ADRs the roadmap will add
 
@@ -70,6 +73,7 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0016 Wave state machine and separation-of-duties** (F5) — closed wave + exception state machines, three-layer SoD, lazy exception expiry, idempotency-key contract
 - **ADR-0017 NetBox integration boundary & sync model** (during F7) — *renumbered from planned ADR-0015*
 - **ADR-0018 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — *renumbered from planned ADR-0016*. Formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
+- **ADR-0019 MCP transport binding** (during F8) — Streamable HTTP mount, shared auth, tool registry, deny-list; closes ADR-0013 deferral
 
 This list is non-binding for the roadmap itself; each `/speckit-plan` may
 add, remove, or rename ADRs.

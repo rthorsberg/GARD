@@ -1,0 +1,104 @@
+# F8 — merged MCP tool registry manifest
+#
+# Authoritative per-feature contracts remain in specs/001..007.
+# This file is the transport-layer registry: what F8 MUST register
+# on the live MCP server at startup.
+
+server:
+  name: gard-mcp
+  version: 0.8.0
+  transport: streamable-http
+  endpoint: /mcp
+  authentication: bearer_jwt
+  protocol: "2025-03-26"
+
+permissions:
+  invoke_any_tool:
+    - mcp.tool.invoke
+
+tools:
+  # F1 — device-import-normalize
+  - name: list_devices
+    source: specs/001-device-import-normalize/contracts/mcp-tools.yaml
+    auth: read_device_lifecycle
+  - name: get_device_lifecycle_status
+    source: specs/001-device-import-normalize/contracts/mcp-tools.yaml
+    auth: read_device_lifecycle
+
+  # F2 — firmware-catalog
+  - name: get_target_firmware
+    source: specs/002-firmware-catalog/contracts/mcp-tools.yaml
+    auth: read_firmware_catalog
+  - name: get_upgrade_path
+    source: specs/002-firmware-catalog/contracts/mcp-tools.yaml
+    auth: read_firmware_catalog
+  - name: list_firmware_targets
+    source: specs/002-firmware-catalog/contracts/mcp-tools.yaml
+    auth: read_firmware_catalog
+  - name: list_firmware_packages
+    source: specs/002-firmware-catalog/contracts/mcp-tools.yaml
+    auth: read_firmware_catalog
+  - name: list_upgrade_paths
+    source: specs/002-firmware-catalog/contracts/mcp-tools.yaml
+    auth: read_firmware_catalog
+
+  # F3 — compliance-drift-evaluation
+  - name: count_devices_outside_target
+    source: specs/003-compliance-drift-evaluation/contracts/mcp-tools.yaml
+    auth: read_compliance
+  - name: list_devices_outside_target
+    source: specs/003-compliance-drift-evaluation/contracts/mcp-tools.yaml
+    auth: read_compliance
+  - name: get_compliance_summary
+    source: specs/003-compliance-drift-evaluation/contracts/mcp-tools.yaml
+    auth: read_compliance
+  - name: get_unknown_lifecycle_items
+    source: specs/003-compliance-drift-evaluation/contracts/mcp-tools.yaml
+    auth: read_compliance
+
+  # F4 — readiness-prerequisites
+  - name: get_readiness_summary
+    source: specs/004-readiness-prerequisites/contracts/mcp-tools.yaml
+    auth: read_readiness
+  - name: list_blocked_devices
+    source: specs/004-readiness-prerequisites/contracts/mcp-tools.yaml
+    auth: read_readiness
+  - name: explain_blockers
+    source: specs/004-readiness-prerequisites/contracts/mcp-tools.yaml
+    auth: read_readiness
+  - name: get_ready_for_uplift_devices
+    source: specs/004-readiness-prerequisites/contracts/mcp-tools.yaml
+    auth: read_readiness
+
+  # F5 — uplift-planning-waves
+  - name: create_uplift_wave_draft
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+  - name: create_exception_review_draft
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+  - name: get_uplift_plan_summary
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+  - name: list_open_waves
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+  - name: list_active_exceptions
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+  - name: explain_wave
+    source: specs/005-uplift-planning-waves/contracts/mcp-tools.yaml
+    auth: read_uplift
+
+  # F7 — netbox-integration-read
+  - name: get_netbox_sync_summary
+    source: specs/007-netbox-integration-read/contracts/mcp-tools.yaml
+    auth: read_netbox_integration
+
+disallowed:
+  - execute_sql
+  - run_shell
+  - read_file
+  - write_file
+  - http_request
+  - propose_firmware_target_draft

@@ -56,6 +56,52 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     issue.add_argument("--ttl-seconds", type=int, default=None)
 
+    netbox = sub.add_parser("netbox", help="NetBox integration utilities")
+    netbox_sub = netbox.add_subparsers(dest="netbox_cmd", required=True)
+    bootstrap_p = netbox_sub.add_parser(
+        "bootstrap-device-types",
+        help="Import curated community device types into NetBox (F9)",
+    )
+    bootstrap_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate manifest without NetBox writes",
+    )
+    bootstrap_p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required for non-localhost NetBox or GARD_ENV=prod",
+    )
+    bootstrap_p.add_argument(
+        "--force",
+        action="store_true",
+        help="Add missing components when slug already exists",
+    )
+    bootstrap_p.add_argument(
+        "--write-token",
+        default=None,
+        help="NetBox write token override",
+    )
+    wb_bootstrap_p = netbox_sub.add_parser(
+        "bootstrap-writeback-fields",
+        help="Bootstrap NetBox custom fields and tags for F10 write-back",
+    )
+    wb_bootstrap_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate manifest without NetBox writes",
+    )
+    wb_bootstrap_p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required for non-localhost NetBox or GARD_ENV=prod",
+    )
+    wb_bootstrap_p.add_argument(
+        "--write-token",
+        default=None,
+        help="NetBox write token override",
+    )
+
     args = parser.parse_args(argv)
 
     if args.cmd == "serve":
@@ -129,6 +175,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         from gard.core.tokens import issue_token_cli
 
         return issue_token_cli(args.subject, args.role, args.ttl_seconds)
+
+    if args.cmd == "netbox":
+        if args.netbox_cmd == "bootstrap-device-types":
+            from gard.cli.netbox_bootstrap import bootstrap_device_types_cli
+
+            dt_extra: list[str] = []
+            if args.dry_run:
+                dt_extra.append("--dry-run")
+            if args.confirm:
+                dt_extra.append("--confirm")
+            if args.force:
+                dt_extra.append("--force")
+            if args.write_token:
+                dt_extra.extend(["--write-token", args.write_token])
+            return bootstrap_device_types_cli(dt_extra)
+        if args.netbox_cmd == "bootstrap-writeback-fields":
+            from gard.cli.netbox_writeback_bootstrap import bootstrap_writeback_fields_cli
+
+            wb_extra: list[str] = []
+            if args.dry_run:
+                wb_extra.append("--dry-run")
+            if args.confirm:
+                wb_extra.append("--confirm")
+            if args.write_token:
+                wb_extra.extend(["--write-token", args.write_token])
+            return bootstrap_writeback_fields_cli(wb_extra)
+        return 2
 
     parser.error(f"unknown command: {args.cmd}")
     return 2

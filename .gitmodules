@@ -1,0 +1,3 @@
+[submodule "vendor/netbox-devicetype-library"]
+	path = vendor/netbox-devicetype-library
+	url = https://github.com/netbox-community/devicetype-library.git

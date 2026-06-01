@@ -145,6 +145,8 @@ class TestUplift:
 
 
 class TestMcpDelegates:
+    """In-process delegates (F1-F7). Live Streamable HTTP transport: see ``tests/integration/test_mcp_transport_isr1121.py`` (F8 / MVP criterion #8)."""
+
     def test_count_outside_target_isr1121(self, client, db_session, project_root) -> None:
         """MVP-08 — MCP count matches REST outside_target devices."""
         bootstrap_mvp_estate(client, db_session, project_root, with_uplift=False)

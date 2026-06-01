@@ -52,6 +52,8 @@ services:
       SUPERUSER_NAME: ${NETBOX_SUPERUSER_NAME:-admin}
       SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-admin@example.com}
       SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:-gard-f7-netbox-dev}
+      # Required for NetBox v4.5+ API token creation (min 50 chars)
+      API_TOKEN_PEPPER_1: ${NETBOX_API_TOKEN_PEPPER_1:-gard-f7-netbox-dev-pepper-not-for-production-minimum-fifty-chars}
       ALLOWED_HOSTS: "*"
       DB_HOST: postgres
       DB_NAME: netbox

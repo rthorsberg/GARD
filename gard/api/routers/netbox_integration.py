@@ -1,10 +1,10 @@
-"""F7 NetBox integration router (read-only sync)."""
+"""F7/F10 NetBox integration router."""
 
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from gard.api.middleware.rbac import require
@@ -16,11 +16,16 @@ from gard.api.schemas.netbox_integration import (
     NetboxSyncRunList,
     NetboxSyncRunOut,
     OrphanedDeviceOut,
+    WritebackConflictOut,
+    WritebackEntryOut,
+    WritebackReportOut,
+    WritebackSummaryOut,
 )
 from gard.core import netbox_sync_controller as ctrl
 from gard.core.rbac import Permission, Principal
 from gard.db.session import get_append_only_session, get_session
 from gard.integrations.netbox.client import NetboxNotConfigured, NetboxUnreachable
+from gard.integrations.netbox.writeback_publisher import WritebackReport
 from gard.models import NetboxSyncRun
 
 router = APIRouter(prefix="/api/v1/integrations/netbox", tags=["netbox"])
@@ -41,8 +46,42 @@ def _run_out(run: NetboxSyncRun) -> NetboxSyncRunOut:
     )
 
 
+def _writeback_out(report: WritebackReport | None) -> WritebackReportOut | None:
+    if report is None:
+        return None
+    return WritebackReportOut(
+        phase=report.phase.value,
+        summary=WritebackSummaryOut(
+            updated=report.summary.updated,
+            skipped=report.summary.skipped,
+            unchanged=report.summary.unchanged,
+            conflict=report.summary.conflict,
+            failed=report.summary.failed,
+            skipped_not_linked=report.summary.skipped_not_linked,
+        ),
+        entries=[
+            WritebackEntryOut(
+                device_id=e.device_id,
+                netbox_device_id=e.netbox_device_id,
+                status=e.status.value,
+                message=e.message,
+                conflicts=[
+                    WritebackConflictOut(
+                        field=c.field,
+                        expected=c.expected,
+                        actual=c.actual,
+                    )
+                    for c in e.conflicts
+                ],
+            )
+            for e in report.entries
+        ],
+    )
+
+
 @router.post("/sync", response_model=NetboxSyncEnvelope, summary="Trigger NetBox sync")
 def trigger_sync(
+    confirm_writeback: bool = Query(default=False),
     principal: Principal = Depends(require(Permission.SYNC_NETBOX)),
     session: Session = Depends(get_session),
     audit_session: Session = Depends(get_append_only_session),
@@ -52,6 +91,7 @@ def trigger_sync(
             session=session,
             audit_session=audit_session,
             principal=principal,
+            writeback_confirm=confirm_writeback,
         )
     except NetboxNotConfigured as exc:
         raise HTTPException(
@@ -107,6 +147,7 @@ def trigger_sync(
             )
             for o in outcome.report.orphaned_in_gard
         ],
+        writeback=_writeback_out(outcome.report.writeback),
     )
     return NetboxSyncEnvelope(
         data={

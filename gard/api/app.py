@@ -21,6 +21,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     s.validate_for_env()
     configure_logging(level=s.log_level, service_name=s.service_name, env=s.env)
 
+    mcp_session_manager = None
+    if s.mcp_enabled:
+        from gard.mcp.server import create_session_manager
+
+        mcp_session_manager = create_session_manager()
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         # Best-effort catalog reload on app boot. Failures are logged but
@@ -74,7 +80,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except Exception as exc:  # pragma: no cover - DB may be down at boot
             log.warning("firmware_catalog.bootstrap_unexpected_error", error=str(exc))
 
-        yield
+        if s.mcp_enabled:
+            from gard.mcp.server import mcp_runtime
+
+            if mcp_session_manager is None:
+                raise RuntimeError("MCP enabled but session manager was not created")
+            async with mcp_runtime(mcp_session_manager):
+                yield
+        else:
+            yield
 
     app = FastAPI(
         title="GARD",
@@ -104,7 +118,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     _install_openapi_security(app)
 
+    _mount_mcp(app, s, mcp_session_manager if s.mcp_enabled else None)
+
     return app
+
+
+def _mount_mcp(
+    app: FastAPI,
+    settings: Settings,
+    session_manager: object | None,
+) -> None:
+    """Mount Streamable HTTP MCP or expose a disabled response."""
+    from fastapi.responses import JSONResponse
+
+    path = settings.mcp_path.rstrip("/") or "/mcp"
+    if not settings.mcp_enabled or session_manager is None:
+
+        @app.api_route(path, methods=["GET", "POST", "DELETE"], include_in_schema=False)
+        @app.api_route(
+            f"{path}/{{rest:path}}", methods=["GET", "POST", "DELETE"], include_in_schema=False
+        )
+        async def _mcp_disabled() -> JSONResponse:
+            return JSONResponse(status_code=404, content={"detail": "MCP disabled"})
+
+        return
+
+    from gard.mcp.server import create_mcp_asgi_app
+
+    app.mount(path, create_mcp_asgi_app(session_manager))  # type: ignore[arg-type]
 
 
 def _install_openapi_security(app: FastAPI) -> None:

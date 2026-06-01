@@ -1,0 +1,82 @@
+# Write-Back Manifest JSON Schema (F10)
+# Validates gard-catalog/netbox/write-back-manifest.yaml
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GardNetboxWriteBackManifest
+type: object
+additionalProperties: false
+required:
+  - schema_version
+  - object_type
+  - unknown_sentinel
+  - custom_fields
+  - tags
+properties:
+  schema_version:
+    type: string
+    const: "1"
+  object_type:
+    type: string
+    const: dcim.device
+  unknown_sentinel:
+    type: string
+    minLength: 1
+  custom_fields:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - gard_source
+        - netbox_field
+        - netbox_type
+      properties:
+        id:
+          type: string
+          pattern: "^[a-z0-9-]+$"
+        gard_source:
+          type: string
+          enum:
+            - lifecycle_state
+            - compliance_summary
+            - readiness_summary
+            - target_firmware
+            - compliance_evaluated_at
+            - readiness_evaluated_at
+        netbox_field:
+          type: string
+          pattern: "^[a-z0-9_]+$"
+        netbox_type:
+          type: string
+          enum:
+            - text
+            - longtext
+            - integer
+            - date
+            - datetime
+        description:
+          type: string
+  tags:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - apply_when
+      properties:
+        slug:
+          type: string
+          pattern: "^[-a-z0-9_]+$"
+        apply_when:
+          type: string
+          enum:
+            - always
+            - drift_outside_target
+            - readiness_blocked
+            - readiness_ready_for_uplift
+        description:
+          type: string

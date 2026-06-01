@@ -215,6 +215,16 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- F8: MCP transport -----------------------------------------------
+    mcp_enabled: bool = Field(
+        default=True,
+        description="When false, the /mcp endpoint returns 404 and no MCP app is mounted.",
+    )
+    mcp_path: str = Field(
+        default="/mcp",
+        description="URL path where Streamable HTTP MCP is mounted on the API app.",
+    )
+
     # --- F7: NetBox integration (read-only) ------------------------------
     netbox_url: HttpUrl | None = Field(
         default=None,
@@ -239,6 +249,35 @@ class Settings(BaseSettings):
         ge=1,
         description="Hard cap on devices pulled per sync run.",
     )
+    netbox_write_token: str | None = Field(
+        default=None,
+        description="Write-capable NetBox API token for F10 lifecycle write-back.",
+    )
+    netbox_writeback_enabled: bool = Field(
+        default=True,
+        description="When false, sync skips the post-sync write-back phase.",
+    )
+
+    def resolved_netbox_write_token(self) -> str | None:
+        """Write token for F10; dev/test may fall back to read token."""
+        if self.netbox_write_token:
+            return self.netbox_write_token
+        if self.env in ("dev", "test"):
+            return self.netbox_token
+        return None
+
+    def writeback_active(self) -> bool:
+        return self.netbox_writeback_enabled and bool(self.resolved_netbox_write_token())
+
+    @staticmethod
+    def is_local_netbox_url(url: str) -> bool:
+        from urllib.parse import urlparse
+
+        host = (urlparse(url).hostname or "").lower()
+        return host in ("localhost", "127.0.0.1", "::1")
+
+    def requires_writeback_confirm(self, netbox_url: str) -> bool:
+        return self.env == "prod" or not self.is_local_netbox_url(netbox_url)
 
     @field_validator("jwt_secret")
     @classmethod

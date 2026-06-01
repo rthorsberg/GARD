@@ -51,6 +51,9 @@ class Device(Base):
     netbox_last_synced_at: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    netbox_last_writeback_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
     source_system: Mapped[str] = mapped_column(String, nullable=False)

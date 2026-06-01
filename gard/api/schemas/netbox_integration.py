@@ -1,9 +1,10 @@
-"""F7 NetBox integration REST DTOs."""
+"""F7/F10 NetBox integration REST DTOs."""
 
 from __future__ import annotations
 
 import datetime as dt
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -16,12 +17,42 @@ class OrphanedDeviceOut(BaseModel):
     reason: str
 
 
+class WritebackConflictOut(BaseModel):
+    field: str
+    expected: str
+    actual: str
+
+
+class WritebackEntryOut(BaseModel):
+    device_id: uuid.UUID
+    netbox_device_id: int
+    status: Literal["updated", "skipped", "unchanged", "conflict", "failed"]
+    message: str | None = None
+    conflicts: list[WritebackConflictOut] = Field(default_factory=list)
+
+
+class WritebackSummaryOut(BaseModel):
+    updated: int = Field(ge=0)
+    skipped: int = Field(ge=0)
+    unchanged: int = Field(ge=0)
+    conflict: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    skipped_not_linked: int = Field(ge=0)
+
+
+class WritebackReportOut(BaseModel):
+    phase: Literal["completed", "partial", "failed", "skipped"]
+    summary: WritebackSummaryOut
+    entries: list[WritebackEntryOut] = Field(default_factory=list)
+
+
 class NetboxSyncReportOut(BaseModel):
     matched_count: int = Field(ge=0)
     created_count: int = Field(ge=0)
     updated_count: int = Field(ge=0)
     orphaned_count: int = Field(ge=0)
     orphaned_in_gard: list[OrphanedDeviceOut] = Field(default_factory=list)
+    writeback: WritebackReportOut | None = None
 
 
 class NetboxSyncRunOut(BaseModel):

@@ -37,6 +37,7 @@ RUN useradd --system --uid 10001 --home /app gard
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 COPY gard ./gard
 COPY gard-catalog ./gard-catalog
+COPY specs ./specs
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh
 # Pre-create the blob root so the Docker named-volume inherits ownership
 # from the image directory rather than getting root:root by default.

@@ -18,6 +18,8 @@ build/
 gard-speckit-start.zip
 gard-speckit-start/
 specs/
+!specs/008-mcp-transport/
+!specs/008-mcp-transport/**
 tests/
 adr/
 .cursor/

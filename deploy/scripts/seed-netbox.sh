@@ -22,6 +22,16 @@ COMPOSE_PROJECT="${NETBOX_COMPOSE_PROJECT:-gard-f7-netbox}"
 NETBOX_URL="${NETBOX_URL:-http://127.0.0.1:18888}"
 NETBOX_URL="${NETBOX_URL%/}"
 
+# NetBox v2 tokens use "Bearer nbt_<key>.<secret>"; v1 uses "Token <secret>".
+nb_auth_header() {
+  local token="${1:-$NETBOX_SEED_TOKEN}"
+  if [[ "$token" == nbt_*.* ]]; then
+    printf 'Bearer %s' "$token"
+  else
+    printf 'Token %s' "$token"
+  fi
+}
+
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 red()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
@@ -42,16 +52,18 @@ nb_api() {
   local method="$1"
   local path="$2"
   local data="${3:-}"
+  local auth
+  auth=$(nb_auth_header)
   if [[ -n "$data" ]]; then
     curl -sS -X "$method" \
-      -H "Authorization: Token ${NETBOX_SEED_TOKEN}" \
+      -H "Authorization: ${auth}" \
       -H "Content-Type: application/json" \
       -H "Accept: application/json" \
       -d "$data" \
       "${NETBOX_URL}/api${path}"
   else
     curl -sS -X "$method" \
-      -H "Authorization: Token ${NETBOX_SEED_TOKEN}" \
+      -H "Authorization: ${auth}" \
       -H "Accept: application/json" \
       "${NETBOX_URL}/api${path}"
   fi
@@ -77,6 +89,13 @@ ensure_id() {
   python3 -c 'import json,sys; r=json.load(sys.stdin); print(r["results"][0]["id"] if r.get("results") else "")' <<<"$resp"
 }
 
+lookup_device_type_id() {
+  local slug="$1"
+  local resp
+  resp=$(nb_api GET "/dcim/device-types/?slug=${slug}&limit=1")
+  python3 -c 'import json,sys; r=json.load(sys.stdin); print(r["results"][0]["id"] if r.get("results") else "")' <<<"$resp"
+}
+
 bold "==> Waiting for NetBox at ${NETBOX_URL}/login/"
 for i in $(seq 1 60); do
   if curl -sS -o /dev/null -w '%{http_code}' "${NETBOX_URL}/login/" 2>/dev/null | grep -q '^200$'; then
@@ -87,17 +106,64 @@ for i in $(seq 1 60); do
   sleep 2
 done
 
-bold "==> Ensuring NetBox reference objects (site, manufacturer, device type, role, tag)"
+bold "==> Bootstrapping community device types (F9 manifest)"
+(
+  cd "$REPO_ROOT"
+  export GARD_NETBOX_URL="$NETBOX_URL"
+  export GARD_NETBOX_TOKEN="$NETBOX_SEED_TOKEN"
+  export GARD_NETBOX_VERIFY_TLS=false
+  if command -v uv >/dev/null 2>&1; then
+    uv run python -m gard netbox bootstrap-device-types
+  else
+    python3 -m gard netbox bootstrap-device-types
+  fi
+)
+
+bold "==> Bootstrapping write-back custom fields (F10 manifest)"
+(
+  cd "$REPO_ROOT"
+  export GARD_NETBOX_URL="$NETBOX_URL"
+  export GARD_NETBOX_WRITE_TOKEN="${GARD_NETBOX_WRITE_TOKEN:-$NETBOX_SEED_TOKEN}"
+  export GARD_NETBOX_VERIFY_TLS=false
+  if command -v uv >/dev/null 2>&1; then
+    uv run python -m gard netbox bootstrap-writeback-fields
+  else
+    python3 -m gard netbox bootstrap-writeback-fields
+  fi
+)
+
+ISR_DTYPE_SLUG="cisco-isr-1121-8p"
+
+bold "==> Ensuring NetBox reference objects (region, site, location, rack, role, tag)"
+REGION_ID=$(ensure_id "/dcim/regions/" "/dcim/regions/" \
+  '{"name":"Nordics","slug":"nordics"}')
 SITE_ID=$(ensure_id "/dcim/sites/" "/dcim/sites/" \
-  '{"name":"Oslo DC1","slug":"oslo-dc1","status":"active"}')
-MFG_ID=$(ensure_id "/dcim/manufacturers/" "/dcim/manufacturers/" \
-  '{"name":"Cisco","slug":"cisco"}')
-DTYPE_ID=$(ensure_id "/dcim/device-types/" "/dcim/device-types/" \
   "$(python3 - <<PY
 import json
-print(json.dumps({"manufacturer": int("${MFG_ID}"), "model": "ISR1121-8P", "slug": "isr1121-8p"}))
+print(json.dumps({"name":"Oslo DC1","slug":"oslo-dc1","status":"active","region": int("${REGION_ID}")}))
 PY
 )")
+LOCATION_ID=$(ensure_id "/dcim/locations/" "/dcim/locations/" \
+  "$(python3 - <<PY
+import json
+print(json.dumps({"name":"Hall A","slug":"hall-a","status":"active","site": int("${SITE_ID}")}))
+PY
+)")
+RACK_ID=$(ensure_id "/dcim/racks/" "/dcim/racks/" \
+  "$(python3 - <<PY
+import json
+print(json.dumps({
+  "name":"Rack A01","slug":"rack-a01","status":"active",
+  "site": int("${SITE_ID}"), "location": int("${LOCATION_ID}"),
+  "u_height": 42, "width": 19, "form_factor": "2-post-frame"
+}))
+PY
+)")
+DTYPE_ID=$(lookup_device_type_id "$ISR_DTYPE_SLUG")
+if [[ -z "$DTYPE_ID" ]]; then
+  red "device type ${ISR_DTYPE_SLUG} missing after bootstrap — check manifest/submodule"
+  exit 1
+fi
 ROLE_ID=$(ensure_id "/dcim/device-roles/" "/dcim/device-roles/" \
   '{"name":"edge","slug":"edge","color":"2196f3"}')
 TAG_ID=$(ensure_id "/extras/tags/" "/extras/tags/" \
@@ -106,6 +172,7 @@ TAG_ID=$(ensure_id "/extras/tags/" "/extras/tags/" \
 seed_device() {
   local name="$1"
   local serial="$2"
+  local rack_position="$3"
   local existing
   existing=$(nb_api GET "/dcim/devices/?serial=${serial}&limit=1")
   local found
@@ -121,6 +188,10 @@ print(json.dumps({
   "name": "${name}",
   "serial": "${serial}",
   "site": int("${SITE_ID}"),
+  "location": int("${LOCATION_ID}"),
+  "rack": int("${RACK_ID}"),
+  "position": float("${rack_position}"),
+  "face": "front",
   "device_type": int("${DTYPE_ID}"),
   "role": int("${ROLE_ID}"),
   "status": "active",
@@ -133,8 +204,8 @@ PY
 }
 
 bold "==> Seeding ISR1121-aligned devices (matches deploy/scripts/fixtures/isr1121-devices.csv)"
-seed_device "r-osl-001" "FOC123456"
-seed_device "r-osl-002" "FOC123457"
+seed_device "r-osl-001" "FOC123456" "1"
+seed_device "r-osl-002" "FOC123457" "2"
 
 bold "==> Done. Point GARD at NetBox and sync:"
 cat <<EOF
