@@ -215,6 +215,16 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- F8: MCP transport -----------------------------------------------
+    mcp_enabled: bool = Field(
+        default=True,
+        description="When false, the /mcp endpoint returns 404 and no MCP app is mounted.",
+    )
+    mcp_path: str = Field(
+        default="/mcp",
+        description="URL path where Streamable HTTP MCP is mounted on the API app.",
+    )
+
     # --- F7: NetBox integration (read-only) ------------------------------
     netbox_url: HttpUrl | None = Field(
         default=None,

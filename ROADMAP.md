@@ -37,7 +37,7 @@
 | F5 | Uplift Planning & Waves | `uplift-planning-waves` | **shipped** (PR #5) — dry-run only; ADR-0016 | `UpliftPlan` (dry-run only in v1); `UpliftWave` with approval gates; `Exception` entity; transitions `ready_for_uplift → uplift_planned → approval_pending → approved`. MCP tools: `create_uplift_wave_draft`, `create_exception_review_draft`, and the four reporting tools. | F3, F4 |
 | F6 | MVP Vertical Slice Validation | `mvp-vertical-slice-cisco-isr1121` | **shipped** (PR #6) | Reference end-to-end proof for Cisco ISR1121: all MVP acceptance criteria from `gard-speckit-start/specs/04-mvp-scope.md` checked green. Integration tests, sample data, runbook. Not new product code. | F1–F5 |
 | F7 | NetBox Integration (read-only, ecosystem-aware) | `netbox-integration-read` | **shipped** (PR #7) | First-class NetBox identity reference per ADR-0001/0017/0018. Read-only: GARD pulls DCIM devices from NetBox REST, reconciles `Device` rows, populates tags for `tagged_with`, optional dev stack on port **18888** (`gard-f7-netbox`). MCP delegate `get_netbox_sync_summary`; transport deferred to F8. | F1 |
-| F8 | Native MCP Transport | `mcp-transport` | **in progress** (`008-mcp-transport`) | Live Streamable HTTP MCP server at `/mcp` with shared JWT/RBAC/audit. Registers all **22** tools from F1–F7 contracts; implements missing F1/F2 delegates. Closes MVP criterion #8 and ADR-0013 transport deferral. | F1–F7 |
+| F8 | Native MCP Transport | `mcp-transport` | **shipped** (`008-mcp-transport`) | Live Streamable HTTP MCP server at `/mcp` with shared JWT/RBAC/audit. Registers all **22** tools from F1–F7 contracts; implements missing F1/F2 delegates. Closes MVP criterion #8 and ADR-0013 transport deferral (ADR-0019). | F1–F7 |
 
 ## Out of v1 scope
 

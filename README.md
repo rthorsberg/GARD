@@ -156,8 +156,9 @@ Complexity Tracking section and be approved before implementation.
 - ✅ **F7 — NetBox Integration (read-only)** shipped on `main` (PR #7).
   Read-only NetBox REST sync, `tagged_with` from synced tags, MCP summary
   delegate; dev NetBox on port **18888** (`gard-f7-netbox`).
-- 🚧 **F8 — Native MCP Transport** on `008-mcp-transport`. Live Streamable
-  HTTP server wiring all 22 F1–F7 tool contracts; closes MVP criterion #8.
+- ✅ **F8 — Native MCP Transport** shipped on `008-mcp-transport`. Live Streamable
+  HTTP at `/mcp` registers all 22 F1–F7 tools with shared JWT/RBAC/audit;
+  closes MVP criterion #8 and ADR-0013 transport deferral (ADR-0019).
 - ⏭️ **Next after F8**: execution adapters, NetBox write-back (post-v1).
 
 ## Quickstart

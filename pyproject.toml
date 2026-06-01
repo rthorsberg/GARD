@@ -87,6 +87,7 @@ ignore = [
 # SHAs. S603/S607 are intentional here — git is PATH-resolved by design
 # (matches the operator's env) and the argv is a literal, not interpolated.
 "gard/core/firmware_catalog_controller.py" = ["S603", "S607"]
+"gard/mcp/handler.py" = ["N818"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -102,6 +103,10 @@ plugins = []
 [[tool.mypy.overrides]]
 module = ["jose.*", "authlib.*", "uuid_extensions.*", "mcp.*", "networkx.*", "jsonschema.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["gard.mcp.server"]
+disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
