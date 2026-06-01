@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: GARD — F10 NetBox Write-Back (extends F7)
+  version: "0.10.0"
+  description: |
+    Extends F7 sync response with post-sync write-back phase outcomes.
+    Pull phase semantics unchanged except write-back runs after successful reconcile.
+
+servers:
+  - url: /api/v1
+    description: GARD API root
+
+paths:
+  /integrations/netbox/sync:
+    post:
+      summary: Trigger NetBox sync + post-sync write-back
+      operationId: triggerNetboxSyncWithWriteback
+      parameters:
+        - name: confirm_writeback
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Required when GARD_ENV=prod or NetBox URL is non-localhost.
+            Confirms lifecycle metadata write-back to NetBox.
+      description: |
+        Phase 1 (F7): Pages NetBox devices, reconciles GARD Device rows.
+        Phase 2 (F10): Writes custom fields + tags for all linked devices
+        in the sync batch. Returns HTTP 200 when phase 1 succeeds even if
+        phase 2 has partial failures.
+      responses:
+        "200":
+          description: Sync pull succeeded (write-back may be partial)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetboxSyncWithWritebackEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Ambiguous NetBox identity (duplicate serial)
+        "502":
+          description: NetBox unreachable during pull phase (no write-back)
+
+components:
+  schemas:
+    WritebackSummary:
+      type: object
+      required:
+        - updated
+        - skipped
+        - unchanged
+        - conflict
+        - failed
+        - skipped_not_linked
+      properties:
+        updated: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        unchanged: { type: integer, minimum: 0 }
+        conflict: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        skipped_not_linked: { type: integer, minimum: 0 }
+
+    WritebackEntry:
+      type: object
+      required: [device_id, netbox_device_id, status]
+      properties:
+        device_id: { type: string, format: uuid }
+        netbox_device_id: { type: integer }
+        status:
+          type: string
+          enum: [updated, skipped, unchanged, conflict, failed]
+        message: { type: string }
+        conflicts:
+          type: array
+          items:
+            type: object
+            required: [field, expected, actual]
+            properties:
+              field: { type: string }
+              expected: { type: string }
+              actual: { type: string }
+
+    WritebackReport:
+      type: object
+      required: [phase, summary]
+      properties:
+        phase:
+          type: string
+          enum: [completed, partial, failed, skipped]
+        summary:
+          $ref: "#/components/schemas/WritebackSummary"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/WritebackEntry"
+
+    NetboxSyncReportWithWriteback:
+      type: object
+      required:
+        - matched_count
+        - created_count
+        - updated_count
+        - orphaned_count
+        - orphaned_in_gard
+        - writeback
+      properties:
+        matched_count: { type: integer, minimum: 0 }
+        created_count: { type: integer, minimum: 0 }
+        updated_count: { type: integer, minimum: 0 }
+        orphaned_count: { type: integer, minimum: 0 }
+        orphaned_in_gard:
+          type: array
+          items: { type: object }
+        writeback:
+          $ref: "#/components/schemas/WritebackReport"
+
+    NetboxSyncWithWritebackEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [run, report]
+          properties:
+            run: { type: object }
+            report:
+              $ref: "#/components/schemas/NetboxSyncReportWithWriteback"

@@ -49,3 +49,17 @@ docker compose -p gard-f7-netbox -f deploy/netbox/docker-compose.yml --env-file 
 ```
 
 See [specs/007-netbox-integration-read/quickstart.md](../specs/007-netbox-integration-read/quickstart.md) for token setup and GARD settings.
+
+## Device type bootstrap (F9)
+
+Before seeding devices, import curated community device types from the pinned manifest:
+
+```bash
+git submodule update --init vendor/netbox-devicetype-library
+export GARD_NETBOX_URL=http://127.0.0.1:18888
+export GARD_NETBOX_TOKEN=$NETBOX_SEED_TOKEN
+export GARD_NETBOX_VERIFY_TLS=false
+python -m gard netbox bootstrap-device-types
+```
+
+`seed-netbox.sh` runs bootstrap automatically. For production NetBox, use `--confirm`. See [specs/009-netbox-devicetype-bootstrap/quickstart.md](../../specs/009-netbox-devicetype-bootstrap/quickstart.md).

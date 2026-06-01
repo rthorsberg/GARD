@@ -59,8 +59,22 @@ projects (including existing NetBox on port 18080):
 
 ```bash
 docker compose -p gard-f7-netbox -f deploy/netbox/docker-compose.yml up -d
-./deploy/scripts/seed-netbox.sh   # requires NETBOX_SEED_TOKEN (write, dev only)
+eval "$(./deploy/scripts/netbox-create-seed-token.sh)"   # v2 bearer token (shown once)
+./deploy/scripts/seed-netbox.sh
 ```
+
+**GARD sync** (rebuild API image, wire NetBox token, pull devices into GARD):
+
+```bash
+./deploy/scripts/sync-gard-netbox.sh
+# JWT saved to .gard/netbox-sync.jwt — re-sync anytime:
+curl -X POST -H "Authorization: Bearer $(cat .gard/netbox-sync.jwt)" \
+  http://127.0.0.1:8080/api/v1/integrations/netbox/sync
+```
+
+The GARD container reaches NetBox at `http://host.docker.internal:18888`
+(not `127.0.0.1`, which is the container itself). The sync script handles
+this automatically.
 
 See [deploy/netbox/README.md](netbox/README.md) and
 [specs/007-netbox-integration-read/quickstart.md](../specs/007-netbox-integration-read/quickstart.md).

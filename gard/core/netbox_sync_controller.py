@@ -23,6 +23,14 @@ from gard.integrations.netbox.client import (
     NetboxNotConfigured,
     NetboxUnreachable,
 )
+from gard.integrations.netbox.write_client import NetboxWriteNotConfigured
+from gard.integrations.netbox.writeback_publisher import (
+    WritebackPhase,
+    WritebackReport,
+    WritebackSummary,
+    run_writeback,
+    skipped_writeback_report,
+)
 from gard.models import Device, NetboxSyncRun, utcnow
 from gard.models._enums import AuditResult, EvidenceType, LifecycleState, NetboxSyncRunStatus
 
@@ -51,6 +59,7 @@ class NetboxSyncReport:
     updated_count: int = 0
     orphaned_count: int = 0
     orphaned_in_gard: list[OrphanedDevice] = field(default_factory=list)
+    writeback: WritebackReport | None = None
 
 
 @dataclass(frozen=True)
@@ -210,10 +219,12 @@ def run_sync(
     principal: Principal,
     client: NetboxClient | None = None,
     correlation_id: str | None = None,
+    writeback_confirm: bool = False,
 ) -> NetboxSyncOutcome:
     """Pull NetBox devices and reconcile in one transaction."""
     cid = correlation_id or get_correlation_id() or str(uuid.uuid4())
     nb_client = client or client_from_settings()
+    settings = get_settings()
     started = utcnow()
 
     audit_emit.emit(
@@ -273,6 +284,89 @@ def run_sync(
     run.updated_count = report.updated_count
     run.orphaned_count = report.orphaned_count
 
+    linked_devices = list(
+        session.scalars(
+            select(Device).where(
+                Device.netbox_device_id.in_([r.id for r in records]),
+            )
+        )
+    )
+
+    writeback_report: WritebackReport
+    if not settings.writeback_active():
+        writeback_report = skipped_writeback_report(reason="write-back disabled or no write token")
+    elif settings.netbox_url is not None and settings.requires_writeback_confirm(
+        str(settings.netbox_url)
+    ) and not writeback_confirm:
+        writeback_report = skipped_writeback_report(
+            reason="production/non-local NetBox requires confirm_writeback=true"
+        )
+    else:
+        audit_emit.emit(
+            session=audit_session,
+            action="netbox.writeback.started",
+            object_type="NetboxSyncRun",
+            object_id=str(run.id),
+            principal=principal,
+            correlation_id=cid,
+            after={"device_count": len(linked_devices)},
+        )
+        try:
+            writeback_report = run_writeback(
+                session=session,
+                devices=linked_devices,
+                settings=settings,
+            )
+        except NetboxWriteNotConfigured as exc:
+            writeback_report = WritebackReport(
+                phase=WritebackPhase.failed,
+                summary=WritebackSummary(),
+                entries=[],
+            )
+            audit_emit.emit(
+                session=audit_session,
+                action="netbox.writeback.failed",
+                object_type="NetboxSyncRun",
+                object_id=str(run.id),
+                principal=principal,
+                result=AuditResult.failure,
+                correlation_id=cid,
+                after={"error": str(exc)},
+            )
+        else:
+            wb_action = (
+                "netbox.writeback.completed"
+                if writeback_report.phase
+                in (WritebackPhase.completed, WritebackPhase.partial)
+                else "netbox.writeback.failed"
+            )
+            audit_emit.emit(
+                session=audit_session,
+                action=wb_action,
+                object_type="NetboxSyncRun",
+                object_id=str(run.id),
+                principal=principal,
+                result=(
+                    AuditResult.failure
+                    if writeback_report.phase == WritebackPhase.failed
+                    else AuditResult.success
+                ),
+                correlation_id=cid,
+                after={
+                    "phase": writeback_report.phase.value,
+                    "updated": writeback_report.summary.updated,
+                    "unchanged": writeback_report.summary.unchanged,
+                    "conflict": writeback_report.summary.conflict,
+                    "failed": writeback_report.summary.failed,
+                },
+            )
+
+    report.writeback = writeback_report
+    run.writeback_updated_count = writeback_report.summary.updated
+    run.writeback_conflict_count = writeback_report.summary.conflict
+    run.writeback_failed_count = writeback_report.summary.failed
+    run.writeback_phase = writeback_report.phase.value
+
     audit_emit.emit(
         session=audit_session,
         action="netbox.sync.completed",
@@ -299,6 +393,13 @@ def run_sync(
             "updated_count": report.updated_count,
             "orphaned_count": report.orphaned_count,
             "correlation_id": cid,
+            "writeback": {
+                "phase": writeback_report.phase.value,
+                "updated": writeback_report.summary.updated,
+                "unchanged": writeback_report.summary.unchanged,
+                "conflict": writeback_report.summary.conflict,
+                "failed": writeback_report.summary.failed,
+            },
         },
         references={"netbox_device_count": len(records)},
     )

@@ -1,0 +1,59 @@
+# Device Type Manifest JSON Schema (F9)
+# Validates gard-catalog/netbox/device-types-manifest.yaml
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GardNetboxDeviceTypeManifest
+type: object
+additionalProperties: false
+required:
+  - schema_version
+  - upstream_repo
+  - upstream_pin
+  - entries
+properties:
+  schema_version:
+    type: string
+    const: "1"
+  upstream_repo:
+    type: string
+    minLength: 1
+    default: netbox-community/devicetype-library
+  upstream_pin:
+    type: string
+    pattern: "^[0-9a-f]{40}$"
+    description: Full git commit SHA of devicetype-library
+  entries:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - vendor_normalized
+        - model_raw_aliases
+        - library_path
+        - expected_slug
+      properties:
+        id:
+          type: string
+          pattern: "^[a-z0-9-]+$"
+        vendor_normalized:
+          type: string
+          minLength: 1
+        model_normalized:
+          type: string
+        model_raw_aliases:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+        library_path:
+          type: string
+          pattern: "^device-types/"
+        expected_slug:
+          type: string
+          pattern: "^[-a-z0-9_]+$"
+        notes:
+          type: string

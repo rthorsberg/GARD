@@ -37,7 +37,9 @@
 | F5 | Uplift Planning & Waves | `uplift-planning-waves` | **shipped** (PR #5) — dry-run only; ADR-0016 | `UpliftPlan` (dry-run only in v1); `UpliftWave` with approval gates; `Exception` entity; transitions `ready_for_uplift → uplift_planned → approval_pending → approved`. MCP tools: `create_uplift_wave_draft`, `create_exception_review_draft`, and the four reporting tools. | F3, F4 |
 | F6 | MVP Vertical Slice Validation | `mvp-vertical-slice-cisco-isr1121` | **shipped** (PR #6) | Reference end-to-end proof for Cisco ISR1121: all MVP acceptance criteria from `gard-speckit-start/specs/04-mvp-scope.md` checked green. Integration tests, sample data, runbook. Not new product code. | F1–F5 |
 | F7 | NetBox Integration (read-only, ecosystem-aware) | `netbox-integration-read` | **shipped** (PR #7) | First-class NetBox identity reference per ADR-0001/0017/0018. Read-only: GARD pulls DCIM devices from NetBox REST, reconciles `Device` rows, populates tags for `tagged_with`, optional dev stack on port **18888** (`gard-f7-netbox`). MCP delegate `get_netbox_sync_summary`; transport deferred to F8. | F1 |
-| F8 | Native MCP Transport | `mcp-transport` | **shipped** (`008-mcp-transport`) | Live Streamable HTTP MCP server at `/mcp` with shared JWT/RBAC/audit. Registers all **22** tools from F1–F7 contracts; implements missing F1/F2 delegates. Closes MVP criterion #8 and ADR-0013 transport deferral (ADR-0019). | F1–F7 |
+| F8 | Native MCP Transport | `mcp-transport` | **shipped** (`008-mcp-transport`, PR #8) | Live Streamable HTTP MCP server at `/mcp` with shared JWT/RBAC/audit. Registers all **22** tools from F1–F7 contracts; implements missing F1/F2 delegates. Closes MVP criterion #8 and ADR-0013 transport deferral (ADR-0019). | F1–F7 |
+| F9 | NetBox Device Type Bootstrap | `netbox-devicetype-bootstrap` | **shipped** (`009-netbox-devicetype-bootstrap`, ADR-0020) | Curated import from community device type library for GARD-supported models only (pinned upstream manifest). Replaces hand-rolled dev seed types; prerequisite for NetBox write-back. | F7 |
+| F10 | NetBox Lifecycle Write-Back | `netbox-writeback` | **shipped** (`010-netbox-writeback`, ADR-0021) | Post-sync push of GARD lifecycle metadata (custom fields + tags) to all NetBox-linked devices in sync batch. Conflict-safe, manifest-driven. | F7, F9, F3, F4 |
 
 ## Out of v1 scope
 
@@ -50,7 +52,7 @@ Each becomes its own feature when prioritized:
 - **Full SEGL certificate integration** — v1 has generic `LifecycleEvidence` only.
 - **UI dashboards** — v1 is API + MCP + minimal admin surfaces only.
 - **Closed-loop continuous reconciliation** — v1 is manually triggered evaluation.
-- **NetBox write-back** — read-only in v1 (F7); write-back is a later feature.
+- **NetBox write-back** — F10 shipped (`010-netbox-writeback`, ADR-0021); post-sync lifecycle mirror via custom fields + tags.
 
 ## ADRs the roadmap will add
 

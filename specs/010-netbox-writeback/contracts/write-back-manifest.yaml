@@ -1,0 +1,59 @@
+# F10 reference copy — canonical file: gard-catalog/netbox/write-back-manifest.yaml
+
+schema_version: "1"
+object_type: dcim.device
+unknown_sentinel: unknown
+
+custom_fields:
+  - id: gard-lifecycle-state
+    gard_source: lifecycle_state
+    netbox_field: gard_lifecycle_state
+    netbox_type: text
+    description: GARD lifecycle state enum value
+
+  - id: gard-compliance-summary
+    gard_source: compliance_summary
+    netbox_field: gard_compliance_summary
+    netbox_type: text
+    description: Derived compliance posture summary
+
+  - id: gard-readiness-summary
+    gard_source: readiness_summary
+    netbox_field: gard_readiness_summary
+    netbox_type: text
+    description: Derived readiness posture summary
+
+  - id: gard-target-firmware
+    gard_source: target_firmware
+    netbox_field: gard_target_firmware
+    netbox_type: text
+    description: Catalog target firmware version string
+
+  - id: gard-compliance-evaluated-at
+    gard_source: compliance_evaluated_at
+    netbox_field: gard_compliance_evaluated_at
+    netbox_type: datetime
+    description: ISO-8601 timestamp of last compliance evaluation
+
+  - id: gard-readiness-evaluated-at
+    gard_source: readiness_evaluated_at
+    netbox_field: gard_readiness_evaluated_at
+    netbox_type: datetime
+    description: ISO-8601 timestamp of last readiness evaluation
+
+tags:
+  - slug: gard-managed
+    apply_when: always
+    description: Device is linked and governed by GARD lifecycle
+
+  - slug: gard-drift-outside-target
+    apply_when: drift_outside_target
+    description: Device compliance indicates outside target firmware
+
+  - slug: gard-readiness-blocked
+    apply_when: readiness_blocked
+    description: Device has blocking readiness verdict
+
+  - slug: gard-ready-for-uplift
+    apply_when: readiness_ready_for_uplift
+    description: Device readiness indicates ready for uplift planning

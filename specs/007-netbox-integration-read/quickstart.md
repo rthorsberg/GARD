@@ -63,9 +63,13 @@ No need to start `gard-f7-netbox` at all.
 ```bash
 export GARD_NETBOX_URL=http://127.0.0.1:18888
 export GARD_NETBOX_TOKEN=<read-only-token>
+export GARD_NETBOX_WRITE_TOKEN=<write-token>   # F10 write-back
+export GARD_NETBOX_WRITEBACK_ENABLED=true
 export GARD_NETBOX_VERIFY_TLS=false
 
 # Optional: seed NetBox with ISR1121-aligned devices (write token, dev only)
+# F9: seed-netbox.sh bootstraps community device types first — see specs/009-netbox-devicetype-bootstrap/quickstart.md
+# F10: seed-netbox.sh also bootstraps write-back custom fields — see specs/010-netbox-writeback/quickstart.md
 export NETBOX_SEED_TOKEN=<write-token>
 ./deploy/scripts/seed-netbox.sh
 
@@ -75,6 +79,8 @@ curl -X POST -H "Authorization: Bearer $(cat .gard/token.jwt)" \
 curl -H "Authorization: Bearer $(cat .gard/token.jwt)" \
   http://127.0.0.1:8080/api/v1/integrations/netbox/summary
 ```
+
+Sync response includes `data.report.writeback` with per-device outcomes (F10). Run compliance/readiness evaluate before sync when fresh lifecycle mirrors are needed.
 
 ## Verify isolation
 

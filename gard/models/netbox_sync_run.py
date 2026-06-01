@@ -36,6 +36,10 @@ class NetboxSyncRun(Base):
     updated_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     orphaned_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    writeback_updated_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writeback_conflict_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writeback_failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writeback_phase: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (
         CheckConstraint(

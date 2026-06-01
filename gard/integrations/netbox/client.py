@@ -8,6 +8,7 @@ from urllib.parse import urljoin
 
 import httpx
 
+from gard.integrations.netbox.auth import netbox_authorization_header
 from gard.core.logging import get_logger
 
 _log = get_logger(__name__)
@@ -127,7 +128,7 @@ class NetboxClient:
             raise RuntimeError(f"NetBox client is read-only; {method} is forbidden")
         url = urljoin(self._base_url, path.lstrip("/"))
         headers = {
-            "Authorization": f"Token {self._token}",
+            "Authorization": netbox_authorization_header(self._token),
             "Accept": "application/json",
         }
         try:

@@ -1,0 +1,55 @@
+# F9 — Canonical device type manifest (lifecycle-as-code)
+# See specs/009-netbox-devicetype-bootstrap/contracts/ for schema + docs.
+
+schema_version: "1"
+upstream_repo: netbox-community/devicetype-library
+upstream_pin: "3e34a981c5e0e5805e21fccf534e316177f4f182"
+
+entries:
+  - id: cisco-isr1121-8p
+    vendor_normalized: cisco
+    model_normalized: ISR1121
+    model_raw_aliases:
+      - ISR1121-8P
+      - ISR1121
+    library_path: device-types/Cisco/ISR-1121-8P.yaml
+    expected_slug: cisco-isr-1121-8p
+    notes: MVP ISR1121 fixture; F6 golden path
+
+  - id: cisco-asr9006
+    vendor_normalized: cisco
+    model_raw_aliases:
+      - ASR9006
+    library_path: device-types/Cisco/ASR-9006.yaml
+    expected_slug: cisco-asr-9006
+    notes: Generic seed devices.csv (iosxr platform)
+
+  - id: cisco-ncs5501
+    vendor_normalized: cisco
+    model_raw_aliases:
+      - NCS5501
+    library_path: device-types/Cisco/NCS-5501-SE.yaml
+    expected_slug: cisco-ncs-5501-se
+    notes: Closest community match for demo CSV NCS5501
+
+  - id: juniper-mx204
+    vendor_normalized: juniper
+    model_raw_aliases:
+      - MX204
+    library_path: device-types/Juniper/MX204.yaml
+    expected_slug: juniper-mx204
+
+  - id: juniper-mx480
+    vendor_normalized: juniper
+    model_raw_aliases:
+      - MX480
+    library_path: device-types/Juniper/MX480.yaml
+    expected_slug: juniper-mx480
+
+  - id: nokia-7750-sr-1
+    vendor_normalized: nokia
+    model_raw_aliases:
+      - "7750 SR-1"
+      - 7750-SR-1
+    library_path: device-types/Nokia/7750-SR-1.yaml
+    expected_slug: nokia-7750-sr-1
