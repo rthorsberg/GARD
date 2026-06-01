@@ -216,7 +216,7 @@ def renormalize_estate(session: Session) -> int:
             observed_at=latest.observed_at if latest else None,
             ram_mb=device.ram_mb,
             disk_mb=device.disk_mb,
-            licenses=";".join(device.licenses) if device.licenses else None,
+            licenses=device.licenses,
         )
         norm = normalize(session=session, row=row, observation_id=latest.id if latest else None)
         upsert_from_row(
