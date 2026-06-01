@@ -8,8 +8,8 @@ from urllib.parse import urljoin
 
 import httpx
 
-from gard.integrations.netbox.auth import netbox_authorization_header
 from gard.core.logging import get_logger
+from gard.integrations.netbox.auth import netbox_authorization_header
 
 _log = get_logger(__name__)
 
