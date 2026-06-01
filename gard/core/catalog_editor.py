@@ -55,7 +55,7 @@ def _validate_name(name: str) -> str:
     slug = name.strip().lower()
     if not _NAME_RE.match(slug):
         raise CatalogEditorError(
-            "name must be lowercase alphanumeric/hyphen, 1–63 chars (e.g. cisco-ios-isr1121)"
+            "name must be lowercase alphanumeric/hyphen, 1-63 chars (e.g. cisco-ios-isr1121)"
         )
     return slug
 

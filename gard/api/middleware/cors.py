@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from starlette.middleware.cors import CORSMiddleware
-
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
 from gard.core.settings import Settings
 
