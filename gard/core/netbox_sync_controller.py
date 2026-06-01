@@ -295,9 +295,11 @@ def run_sync(
     writeback_report: WritebackReport
     if not settings.writeback_active():
         writeback_report = skipped_writeback_report(reason="write-back disabled or no write token")
-    elif settings.netbox_url is not None and settings.requires_writeback_confirm(
-        str(settings.netbox_url)
-    ) and not writeback_confirm:
+    elif (
+        settings.netbox_url is not None
+        and settings.requires_writeback_confirm(str(settings.netbox_url))
+        and not writeback_confirm
+    ):
         writeback_report = skipped_writeback_report(
             reason="production/non-local NetBox requires confirm_writeback=true"
         )
@@ -336,8 +338,7 @@ def run_sync(
         else:
             wb_action = (
                 "netbox.writeback.completed"
-                if writeback_report.phase
-                in (WritebackPhase.completed, WritebackPhase.partial)
+                if writeback_report.phase in (WritebackPhase.completed, WritebackPhase.partial)
                 else "netbox.writeback.failed"
             )
             audit_emit.emit(
