@@ -34,5 +34,10 @@ htmlcov/
 dist/
 build/
 
-# Node (in case we add tooling later)
+# Node (F11 operator portal)
 node_modules/
+web/dist/
+web/coverage/
+web/playwright-report/
+web/test-results/
+*.tsbuildinfo

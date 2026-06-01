@@ -37,9 +37,10 @@ class Permission:
     MANAGE_MCP_TOOLS = "mcp.tool.manage"
 
     # ---- F2: firmware catalog --------------------------------------------
-    # NB: no MANAGE_FIRMWARE_CATALOG permission exists — catalog mutation is
-    # by `git push`, not by role (ADR-0011 §7).
+    # NB: MANAGE_FIRMWARE_CATALOG is lab-only — gated by catalog_editor_enabled
+    # in the admin router. Production catalog changes remain git-native (ADR-0011).
     READ_FIRMWARE_CATALOG = "firmware_catalog.read"
+    MANAGE_FIRMWARE_CATALOG = "firmware_catalog.manage"
     MANAGE_FIRMWARE_BLOB = "firmware_catalog.blob.manage"
 
     # ---- F3: compliance & drift evaluation -------------------------------
@@ -103,6 +104,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.MANAGE_RULES,
         Permission.CREATE_MANUAL_MAPPING,
         Permission.READ_FIRMWARE_CATALOG,
+        Permission.MANAGE_FIRMWARE_CATALOG,
         Permission.MANAGE_FIRMWARE_BLOB,
         Permission.READ_COMPLIANCE,
         Permission.RUN_COMPLIANCE_EVAL,
@@ -141,6 +143,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         Permission.MANAGE_TOKENS,
         Permission.MANAGE_MCP_TOOLS,
         Permission.READ_FIRMWARE_CATALOG,
+        Permission.MANAGE_FIRMWARE_CATALOG,
         Permission.MANAGE_FIRMWARE_BLOB,
         Permission.READ_COMPLIANCE,
         Permission.RUN_COMPLIANCE_EVAL,

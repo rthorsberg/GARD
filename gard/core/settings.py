@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     # --- HTTP -----------------------------------------------------------
     api_host: str = "0.0.0.0"  # noqa: S104  bound by reverse proxy / TLS terminator
     api_port: int = 8000
+    # Comma-separated browser origins for split-origin dev (F11 UI). Empty = disabled.
+    cors_origins: str = ""
     # If `True`, the app refuses to start when the request scheme is `http`
     # (configurable for local dev). Production deployments MUST set this
     # `True`. Tests/dev compose may set `False`.
@@ -109,6 +111,13 @@ class Settings(BaseSettings):
         default=5 * 1024**3,  # 5 GiB
         ge=1,
         description="Per-upload size cap for firmware blobs (FR-031).",
+    )
+    catalog_editor_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true (or when GARD_ENV is dev/test), exposes "
+            "/api/v1/admin/catalog write endpoints for lab UI editing."
+        ),
     )
 
     # --- F3: compliance & drift evaluation ------------------------------

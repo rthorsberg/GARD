@@ -106,6 +106,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_error_handlers(app)
 
+    from gard.api.middleware.cors import install_cors
+
+    install_cors(app, s)
+
     app.include_router(health.router)
     app.include_router(admin_tokens.router)
     app.include_router(audit.router)
@@ -214,6 +218,8 @@ _PHASE3_ROUTERS: tuple[str, ...] = (
     "uplift",
     # F7 (007-netbox-integration-read):
     "netbox_integration",
+    # Lab catalog editor (F11 extension):
+    "catalog_admin",
 )
 
 
