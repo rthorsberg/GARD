@@ -142,3 +142,10 @@ Expected: three `classified` Devices, each with envelope
   Dockerfile exposes `:8000` and the entrypoint binds to `0.0.0.0`.
 - Migrations are run via `python -m alembic` (no console-script
   shim is shipped in the runtime image).
+
+## MCP (F8)
+
+Live Streamable HTTP MCP is mounted at **`/mcp/`** on the API (same port as REST).
+See [specs/008-mcp-transport/quickstart.md](../specs/008-mcp-transport/quickstart.md)
+for token minting (`python -m gard issue-token --role mcp_client`), SDK smoke, and
+disable via `GARD_MCP_ENABLED=false`.
