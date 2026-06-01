@@ -1,0 +1,78 @@
+# GARD Operator Portal — UI Route Contract
+
+**Feature**: F11 `011-operator-dashboard` | **Version**: 0.11.0
+
+Defines frontend routes, layout slots, and required permissions. Implementation lives in `web/src/routes/`.
+
+## Global layout
+
+| Slot | Content |
+|------|---------|
+| `Sidebar` | Primary nav (permission-filtered) |
+| `Header` | Environment badge, subject, role chips, sign-out |
+| `Main` | Route outlet |
+| `Toaster` | Mutation feedback |
+
+## Routes
+
+| Path | Screen | Min permission | Priority |
+|------|--------|----------------|----------|
+| `/sign-in` | Sign-in (public) | none | P1 |
+| `/` | Dashboard redirect | — | → `/dashboard` |
+| `/dashboard` | Dashboard home | `compliance.read` OR `device.list` | P1 |
+| `/devices` | Device list | `device.list` | P1 |
+| `/devices/:deviceId` | Device detail | `device.read` | P1 |
+| `/compliance` | Compliance fleet view | `compliance.read` | P1 |
+| `/readiness` | Readiness fleet view | `readiness.read` | P1 |
+| `/netbox` | NetBox integration | `netbox.read` | P1 |
+| `/uplift` | Wave list | `uplift.read` | P2 |
+| `/uplift/waves/:waveId` | Wave detail | `uplift.read` | P2 |
+| `/uplift/exceptions` | Exception list | `uplift.read` | P2 |
+| `/audit` | Audit log | `audit.read` | P3 |
+| `/catalog` | Firmware catalog browse (read-only) | `firmware_catalog.read` | P3 optional |
+
+## Dashboard widget contract
+
+| Widget ID | Data source | Drill-down target |
+|-----------|-------------|-------------------|
+| `kpi-total-devices` | compliance summary | `/devices` |
+| `kpi-compliant` | compliance summary | `/devices?compliance=compliant` |
+| `kpi-drifted` | compliance summary | `/devices?compliance=outside_target` |
+| `kpi-not-evaluated` | compliance summary unknown bucket | `/devices?compliance=unknown` |
+| `kpi-ready` | readiness summary | `/readiness` |
+| `kpi-blocked` | readiness summary | `/readiness` |
+| `kpi-netbox-linked` | netbox summary | `/netbox` |
+| `chart-posture-mix` | compliance summary | — |
+| `chart-devices-by-site` | compliance devices aggregate (client group) | `/devices?site={site}` |
+| `table-recent-activity` | audit last 10 | `/audit` |
+| `table-top-drift-models` | compliance devices grouped | `/devices?vendor={v}&model={m}` |
+
+## Mutation entry points
+
+| Action | Route | HTTP | Permission |
+|--------|-------|------|------------|
+| Import CSV | `/devices` (dialog) | `POST /api/v1/imports/devices/csv` | `device.import` |
+| Run compliance eval | `/compliance` | `POST /api/v1/compliance/evaluate` | `compliance.evaluate` |
+| Run readiness eval | `/readiness` | `POST /api/v1/readiness/evaluate` | `readiness.evaluate` |
+| NetBox sync | `/netbox` | `POST /api/v1/integrations/netbox/sync` | `netbox.sync` |
+
+## Error states (required per route)
+
+| Code | UI behavior |
+|------|-------------|
+| 401 | Clear session → `/sign-in` |
+| 403 | Toast + hide retry if permission issue |
+| 404 | Empty state with back link |
+| 502/503 | Banner + retry button |
+| Network | Offline banner; cached data marked stale |
+
+## Design reference alignment
+
+Layout follows [Shadcn UI Kit E-commerce Dashboard](https://shadcnuikit.com/dashboard/ecommerce):
+
+- KPI card row ≈ ecommerce revenue/user cards
+- Primary table ≈ product list / recent orders
+- Detail tabs ≈ product detail
+- Status badges ≈ order status chips
+
+Domain copy uses GARD lifecycle vocabulary (see `research.md` R-12).

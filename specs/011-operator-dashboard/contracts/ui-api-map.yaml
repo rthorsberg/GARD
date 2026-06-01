@@ -1,0 +1,105 @@
+# GARD Operator Portal — API Surface Map
+
+**Feature**: F11 `011-operator-dashboard` | **Version**: 0.11.0
+
+Maps UI screens to existing GARD REST endpoints. The UI MUST NOT call endpoints outside this map without a spec/plan amendment.
+
+## Authentication
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Health check | GET | `/healthz` | none |
+| Issue token (external) | POST | `/api/v1/admin/tokens` | `token.manage` |
+
+Sign-in stores JWT from operator-provided token or pre-issued lab file.
+
+## Dashboard
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Compliance aggregates | GET | `/api/v1/compliance/summary` | `compliance.read` |
+| Readiness aggregates | GET | `/api/v1/readiness/summary` | `readiness.read` |
+| NetBox linkage | GET | `/api/v1/integrations/netbox/summary` | `netbox.read` |
+| Recent activity | GET | `/api/v1/audit?limit=10` | `audit.read` |
+
+## Devices
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| List with compliance | GET | `/api/v1/compliance/devices` | `compliance.read` |
+| Generic list | GET | `/api/v1/devices` | `device.list` |
+| Detail | GET | `/api/v1/devices/{id}` | `device.read` |
+| Compliance detail | GET | `/api/v1/devices/{id}/compliance` | `compliance.read` |
+| Readiness detail | GET | `/api/v1/devices/{id}/readiness` | `readiness.read` |
+
+Query params: `limit`, `page_token`, `site`, `region`, `vendor_normalized`, `compliance_state` (compliance list).
+
+## Compliance & readiness actions
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Trigger compliance eval | POST | `/api/v1/compliance/evaluate` | `compliance.evaluate` |
+| Trigger readiness eval | POST | `/api/v1/readiness/evaluate` | `readiness.evaluate` |
+
+## Import
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Upload CSV | POST | `/api/v1/imports/devices/csv` | `device.import` |
+| Job status | GET | `/api/v1/imports/jobs/{job_id}` | `device.import` |
+| Job report | GET | `/api/v1/imports/jobs/{job_id}/report` | `device.import` |
+
+## NetBox
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Trigger sync + write-back | POST | `/api/v1/integrations/netbox/sync?confirm_writeback={bool}` | `netbox.sync` |
+| List sync runs | GET | `/api/v1/integrations/netbox/sync-runs?limit=20` | `netbox.read` |
+| Sync run detail | GET | `/api/v1/integrations/netbox/sync-runs/{run_id}` | `netbox.read` |
+
+## Uplift
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| List waves | GET | `/api/v1/uplift/waves` | `uplift.read` |
+| Wave detail | GET | `/api/v1/uplift/waves/{wave_id}` | `uplift.read` |
+| List exceptions | GET | `/api/v1/uplift/exceptions` | `uplift.read` |
+| Submit wave | POST | `/api/v1/uplift/waves/{wave_id}/submit` | `uplift.draft` |
+| Approve wave | POST | `/api/v1/uplift/waves/{wave_id}/approve` | `uplift.approve` |
+
+Draft/create endpoints included when UI exposes uplift actions (P2).
+
+## Audit & evidence
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| Audit search | GET | `/api/v1/audit` | `audit.read` |
+| Evidence list | GET | `/api/v1/evidence` | `evidence.read` |
+
+## Firmware catalog (optional P3)
+
+| UI need | Method | Path | Permission |
+|---------|--------|------|------------|
+| List targets | GET | `/api/v1/firmware/targets` | `firmware_catalog.read` |
+| List packages | GET | `/api/v1/firmware/packages` | `firmware_catalog.read` |
+
+## OpenAPI reference
+
+Authoritative schema: `{GARD_BASE}/openapi.json` served by FastAPI.
+
+F11 contract tests SHOULD snapshot subset responses under `web/src/api/__fixtures__/`.
+
+## Headers
+
+All authenticated requests:
+
+```http
+Authorization: Bearer <jwt>
+Accept: application/json
+```
+
+Optional correlation (if GARD middleware accepts):
+
+```http
+X-Correlation-ID: <uuid>
+```
