@@ -149,7 +149,8 @@ No constitution violations requiring justification.
 | `contracts/ui-routes.yaml` | Complete |
 | `contracts/ui-api-map.yaml` | Complete |
 | `quickstart.md` | Complete |
-| `tasks.md` | Pending `/speckit-tasks` |
+| `tasks.md` | Complete (55/55 shipped) |
+| Implementation | shipped (`web/`, ADR-0022, `.github/workflows/web-ci.yml`) |
 
 ## Screen wireframe notes (planning reference)
 

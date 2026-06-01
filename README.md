@@ -240,6 +240,21 @@ Other useful targets:
 | `make test` | Run the local test suite against the running stack |
 | `make lint` | `ruff format --check` + `ruff check` |
 
+## Operator portal (F11)
+
+Browser UI in `web/` — dashboard, devices, compliance/readiness, NetBox sync, uplift, audit.
+
+```bash
+# Terminal 1: GARD API (port 8080 in docker compose, or uv run python -m gard serve)
+make token   # mint JWT
+
+# Terminal 2: operator portal
+cd web && npm install && npm run dev
+# Open http://127.0.0.1:5173/sign-in — paste JWT (API URL empty = Vite proxy)
+```
+
+See `specs/011-operator-dashboard/quickstart.md` for full runbook.
+
 ## North star
 
 > No device left unknown. No firmware left unmanaged. No uplift without

@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: #e8eaef;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-border: #cbd5e1;
+  --color-input: #ffffff;
+  --color-ring: #2563eb;
+  --color-primary: #0f172a;
+  --color-primary-foreground: #f8fafc;
+  --color-accent: #dbeafe;
+  --color-accent-foreground: #1e3a8a;
+  --color-sidebar: #ffffff;
+  --color-sidebar-foreground: #475569;
+  --color-sidebar-border: #cbd5e1;
+  --color-sidebar-active: #0f172a;
+  --color-sidebar-active-foreground: #ffffff;
+  --color-success: #16a34a;
+  --color-warning: #ca8a04;
+  --color-destructive: #dc2626;
+  --radius-lg: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.08);
+}
+
+.dark {
+  color-scheme: dark;
+  --color-background: #0b0f17;
+  --color-foreground: #f1f5f9;
+  --color-card: #151b28;
+  --color-card-foreground: #f1f5f9;
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #334155;
+  --color-input: #1e293b;
+  --color-ring: #60a5fa;
+  --color-primary: #f1f5f9;
+  --color-primary-foreground: #0f172a;
+  --color-accent: #1e3a5f;
+  --color-accent-foreground: #bfdbfe;
+  --color-sidebar: #111827;
+  --color-sidebar-foreground: #94a3b8;
+  --color-sidebar-border: #334155;
+  --color-sidebar-active: #f1f5f9;
+  --color-sidebar-active-foreground: #0f172a;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-destructive: #ef4444;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Nav links must not inherit body color over active utility classes */
+a[class*="sidebar-active"],
+a[aria-current="page"] {
+  color: var(--color-sidebar-active-foreground);
+}
+
+input,
+select,
+textarea {
+  background: var(--color-input);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+
+input::placeholder {
+  color: var(--color-muted-foreground);
+}

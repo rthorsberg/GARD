@@ -32,6 +32,9 @@ services:
     restart: "no"
 
   api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
     image: gard-api:dev
     pull_policy: never
     depends_on:
