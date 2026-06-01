@@ -75,7 +75,6 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0017 NetBox integration boundary & sync model** (during F7) — *renumbered from planned ADR-0015*
 - **ADR-0018 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — *renumbered from planned ADR-0016*. Formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
 - **ADR-0019 MCP transport binding** (during F8) — Streamable HTTP mount, shared auth, tool registry, deny-list; closes ADR-0013 deferral
-
 - **ADR-0022 Operator web UI boundary** (during F11) — thin client, no Streamlit, RBAC mirror UX-only
 
 This list is non-binding for the roadmap itself; each `/speckit-plan` may
