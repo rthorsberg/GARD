@@ -135,6 +135,25 @@ def test_discovery_drift_fires_for_missing_observation() -> None:
     assert reason.kind == "missing_observation"
 
 
+def test_discovery_drift_fires_when_observation_row_lacks_firmware() -> None:
+    """CSV rows with empty observed_firmware still create observations."""
+    env = _env(state="unknown", target_version="17.12.4", observed_version=None)
+    now = dt.datetime.now(dt.UTC)
+    fresh_obs = SimpleNamespace(
+        id=uuid.uuid4(),
+        observed_at=now - dt.timedelta(days=2),
+    )
+    reason = drift_rules.is_discovery_drift(
+        env,
+        latest_observation=fresh_obs,
+        now=now,
+        stale_after_days=30,  # type: ignore[arg-type]
+    )
+    assert reason is not None
+    assert reason.kind == "missing_observation"
+    assert "no observed_firmware" in reason.detail
+
+
 def test_discovery_drift_fires_for_stale_observation() -> None:
     env = _env(state="compliant", target_version="7.8.1", observed_version="7.8.1")
     now = dt.datetime.now(dt.UTC)
