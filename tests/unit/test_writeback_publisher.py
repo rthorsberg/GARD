@@ -69,6 +69,8 @@ def _snapshot(**kwargs: Any) -> DeviceLifecycleSnapshot:
         "drift_outside_target": True,
         "readiness_blocked": False,
         "readiness_ready_for_uplift": True,
+        "ipam_alignment_status": "unknown",
+        "ipam_mismatch": False,
     }
     defaults.update(kwargs)
     return DeviceLifecycleSnapshot(**defaults)
@@ -118,6 +120,7 @@ def test_idempotent_unchanged_when_values_match(project_root) -> None:
             "target_firmware": snapshot.target_firmware,
             "compliance_evaluated_at": snapshot.compliance_evaluated_at,
             "readiness_evaluated_at": snapshot.readiness_evaluated_at,
+            "ipam_alignment_status": snapshot.ipam_alignment_status,
         }[mapping.gard_source]
         for mapping in manifest.custom_fields
     }

@@ -220,7 +220,9 @@ def _severity_for(
     return DEFAULT_SEVERITIES[kind]
 
 
-def _policy_matches(policy: InterfacePolicy, *, site: str | None, role: str | None, name: str) -> bool:
+def _policy_matches(
+    policy: InterfacePolicy, *, site: str | None, role: str | None, name: str
+) -> bool:
     if policy.site != "*" and policy.site != site:
         return False
     if policy.role != "*" and policy.role != role:
@@ -375,7 +377,10 @@ def _evaluate_interfaces(
                             kind=AlignmentFindingKind.prefix_vrf_scope_mismatch,
                             device_id=device.id,
                             interface_name=iface.name,
-                            netbox_observed={"interface_vrf": iface.vrf.name, "address_vrf": addr.vrf},
+                            netbox_observed={
+                                "interface_vrf": iface.vrf.name,
+                                "address_vrf": addr.vrf,
+                            },
                         )
                     )
     return findings
@@ -426,9 +431,7 @@ def _evaluate_vlan(
         if exp.site != site:
             continue
         access_pattern = (
-            re.compile(exp.access_interface_pattern)
-            if exp.access_interface_pattern
-            else None
+            re.compile(exp.access_interface_pattern) if exp.access_interface_pattern else None
         )
         scope_key = (snapshot.site_id or 0, exp.vlan_group_slug)
         if scope_key not in vlan_scope_cache and snapshot.site_id is not None:
@@ -643,11 +646,14 @@ def run_alignment(
 
         open_kinds = [d.kind for d in drafts if d.status == AlignmentFindingStatus.open]
         device.netbox_last_alignment_at = utcnow()
-        if any(
-            _severity_for(d.kind, policy) == AlignmentFindingSeverity.error
-            for d in drafts
-            if d.status == AlignmentFindingStatus.open
-        ) or open_kinds:
+        if (
+            any(
+                _severity_for(d.kind, policy) == AlignmentFindingSeverity.error
+                for d in drafts
+                if d.status == AlignmentFindingStatus.open
+            )
+            or open_kinds
+        ):
             device.netbox_alignment_status = "mismatch"
         elif drafts:
             device.netbox_alignment_status = "aligned"
@@ -716,9 +722,7 @@ def run_alignment(
     run.findings_info_count = summary.info_count
     run.completed_at = utcnow()
     run.status = (
-        IpamAlignmentRunStatus.partial
-        if summary.error_count
-        else IpamAlignmentRunStatus.completed
+        IpamAlignmentRunStatus.partial if summary.error_count else IpamAlignmentRunStatus.completed
     )
 
     audit_emit.emit(

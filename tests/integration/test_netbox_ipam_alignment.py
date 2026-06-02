@@ -94,7 +94,9 @@ def test_sync_includes_ipam_alignment_block(client, db_session, project_root) ->
     db_session.commit()
 
     jwt = _token(db_session)
-    body = csv_body([csv_row(hostname="r-ipam-001", serial_number="IPAM001", management_ip="10.10.10.99")])
+    body = csv_body(
+        [csv_row(hostname="r-ipam-001", serial_number="IPAM001", management_ip="10.10.10.99")]
+    )
     r = client.post(
         "/api/v1/imports/devices/csv",
         files={"file": ("devices.csv", body, "text/csv")},

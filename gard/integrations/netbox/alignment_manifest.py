@@ -253,9 +253,7 @@ def load_alignment_manifest(
         if isinstance(o, dict)
     )
 
-    severity_overrides = {
-        str(k): str(v) for k, v in (raw.get("severity_overrides") or {}).items()
-    }
+    severity_overrides = {str(k): str(v) for k, v in (raw.get("severity_overrides") or {}).items()}
 
     manifest = AlignmentPolicyManifest(
         schema_version=str(raw["schema_version"]),

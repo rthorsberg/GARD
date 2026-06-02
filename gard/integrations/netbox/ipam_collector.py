@@ -168,11 +168,19 @@ def collect_device_snapshot(client: NetboxClient, netbox_device_id: int) -> Devi
     interfaces = [_normalize_interface(row, addr_map) for row in iface_rows]
     return DeviceNetworkSnapshot(
         netbox_device_id=netbox_device_id,
-        primary_ip4=_ip_address(detail.get("primary_ip4") if isinstance(detail.get("primary_ip4"), dict) else None),
-        primary_ip6=_ip_address(detail.get("primary_ip6") if isinstance(detail.get("primary_ip6"), dict) else None),
-        oob_ip=_ip_address(detail.get("oob_ip") if isinstance(detail.get("oob_ip"), dict) else None),
+        primary_ip4=_ip_address(
+            detail.get("primary_ip4") if isinstance(detail.get("primary_ip4"), dict) else None
+        ),
+        primary_ip6=_ip_address(
+            detail.get("primary_ip6") if isinstance(detail.get("primary_ip6"), dict) else None
+        ),
+        oob_ip=_ip_address(
+            detail.get("oob_ip") if isinstance(detail.get("oob_ip"), dict) else None
+        ),
         site_slug=_nested_slug(site),
-        site_id=site.get("id") if isinstance(site, dict) and isinstance(site.get("id"), int) else None,
+        site_id=site.get("id")
+        if isinstance(site, dict) and isinstance(site.get("id"), int)
+        else None,
         role_slug=_nested_slug(role),
         interfaces=interfaces,
     )
@@ -191,7 +199,8 @@ def collect_device_snapshots(
     workers = min(max(concurrency, 1), len(netbox_device_ids))
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(collect_device_snapshot, client, nb_id): nb_id for nb_id in netbox_device_ids
+            pool.submit(collect_device_snapshot, client, nb_id): nb_id
+            for nb_id in netbox_device_ids
         }
         for fut in as_completed(futures):
             nb_id = futures[fut]
@@ -206,18 +215,18 @@ def interface_to_json(iface: InterfaceRecord) -> dict[str, Any]:
         "mode": iface.mode,
         "mgmt_only": iface.mgmt_only,
         "vrf": (
-            {"id": iface.vrf.id, "name": iface.vrf.name, "rd": iface.vrf.rd}
-            if iface.vrf
-            else None
+            {"id": iface.vrf.id, "name": iface.vrf.name, "rd": iface.vrf.rd} if iface.vrf else None
         ),
         "untagged_vlan": (
-            {"id": iface.untagged_vlan.id, "vid": iface.untagged_vlan.vid, "name": iface.untagged_vlan.name}
+            {
+                "id": iface.untagged_vlan.id,
+                "vid": iface.untagged_vlan.vid,
+                "name": iface.untagged_vlan.name,
+            }
             if iface.untagged_vlan
             else None
         ),
-        "tagged_vlans": [
-            {"id": v.id, "vid": v.vid, "name": v.name} for v in iface.tagged_vlans
-        ],
+        "tagged_vlans": [{"id": v.id, "vid": v.vid, "name": v.name} for v in iface.tagged_vlans],
         "addresses": [
             {
                 "address": a.address,
