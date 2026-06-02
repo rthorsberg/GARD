@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from gard.api.schemas.ipam_alignment import IpamAlignmentReportOut
+
 
 class OrphanedDeviceOut(BaseModel):
     device_id: uuid.UUID
@@ -52,6 +54,7 @@ class NetboxSyncReportOut(BaseModel):
     updated_count: int = Field(ge=0)
     orphaned_count: int = Field(ge=0)
     orphaned_in_gard: list[OrphanedDeviceOut] = Field(default_factory=list)
+    ipam_alignment: IpamAlignmentReportOut | None = None
     writeback: WritebackReportOut | None = None
 
 

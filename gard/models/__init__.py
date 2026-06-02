@@ -49,6 +49,7 @@ from gard.models.api_token import ApiToken  # noqa: E402
 from gard.models.audit_event import AuditChainHead, AuditEvent  # noqa: E402
 from gard.models.compliance_evaluation import ComplianceEvaluation  # noqa: E402
 from gard.models.device import Device  # noqa: E402
+from gard.models.device_network_context import DeviceNetworkContext  # noqa: E402
 from gard.models.firmware_package import FirmwarePackage  # noqa: E402
 from gard.models.firmware_prerequisite import (  # noqa: E402
     FirmwarePrerequisiteRule,
@@ -58,6 +59,8 @@ from gard.models.firmware_prerequisite import (  # noqa: E402
 from gard.models.firmware_target import FirmwareTarget  # noqa: E402
 from gard.models.firmware_upgrade_path import FirmwareUpgradePath  # noqa: E402
 from gard.models.import_job import ImportJob  # noqa: E402
+from gard.models.ipam_alignment_finding import IpamAlignmentFinding  # noqa: E402
+from gard.models.ipam_alignment_run import IpamAlignmentRun  # noqa: E402
 from gard.models.lifecycle_evidence import LifecycleEvidence  # noqa: E402
 from gard.models.manual_mapping import ManualMapping  # noqa: E402
 from gard.models.netbox_sync_run import NetboxSyncRun  # noqa: E402
@@ -76,12 +79,15 @@ __all__ = [
     "Base",
     "ComplianceEvaluation",
     "Device",
+    "DeviceNetworkContext",
     "DeviceObservation",
     "FirmwarePackage",
     "FirmwarePrerequisiteRule",
     "FirmwareTarget",
     "FirmwareUpgradePath",
     "ImportJob",
+    "IpamAlignmentFinding",
+    "IpamAlignmentRun",
     "LifecycleEvidence",
     "ManualMapping",
     "NetboxSyncRun",

@@ -91,3 +91,9 @@ docker ps -a --format '{{.Names}}' | sort
 ```
 
 Names outside `gard-f7-netbox-*` should be unchanged.
+
+## F12 — IPAM alignment (post-sync)
+
+After F7 device sync, GARD runs an IPAM/DCIM alignment phase (ADR-0023): management IP, interface IPAM, VRF, and VLAN checks against `gard-catalog/netbox/alignment-policy-manifest.yaml`. Results appear in `report.ipam_alignment` on sync and on the operator portal NetBox / device Network tabs.
+
+See [specs/012-netbox-ipam-dcim-align/quickstart.md](../012-netbox-ipam-dcim-align/quickstart.md).

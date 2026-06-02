@@ -8,6 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from gard.api.middleware.rbac import require
+from gard.api.schemas.ipam_alignment import (
+    IpamAlignmentEntryOut,
+    IpamAlignmentFindingList,
+    IpamAlignmentFindingOut,
+    IpamAlignmentReportOut,
+    IpamAlignmentSummaryOut,
+)
 from gard.api.schemas.netbox_integration import (
     NetboxSummaryEnvelope,
     NetboxSummaryOut,
@@ -21,12 +28,15 @@ from gard.api.schemas.netbox_integration import (
     WritebackReportOut,
     WritebackSummaryOut,
 )
+from gard.core import ipam_alignment_controller as align_ctrl
 from gard.core import netbox_sync_controller as ctrl
+from gard.core.ipam_alignment_controller import IpamAlignmentReport
 from gard.core.rbac import Permission, Principal
 from gard.db.session import get_append_only_session, get_session
 from gard.integrations.netbox.client import NetboxNotConfigured, NetboxUnreachable
 from gard.integrations.netbox.writeback_publisher import WritebackReport
-from gard.models import NetboxSyncRun
+from gard.models import IpamAlignmentFinding, NetboxSyncRun
+from gard.models._enums import AlignmentFindingSeverity
 
 router = APIRouter(prefix="/api/v1/integrations/netbox", tags=["netbox"])
 
@@ -76,6 +86,51 @@ def _writeback_out(report: WritebackReport | None) -> WritebackReportOut | None:
             )
             for e in report.entries
         ],
+    )
+
+
+def _alignment_out(report: IpamAlignmentReport | None) -> IpamAlignmentReportOut | None:
+    if report is None:
+        return None
+    return IpamAlignmentReportOut(
+        phase=report.phase.value,
+        run_id=report.run_id,
+        summary=IpamAlignmentSummaryOut(
+            devices_checked=report.summary.devices_checked,
+            aligned_count=report.summary.aligned_count,
+            mismatch_count=report.summary.mismatch_count,
+            error_count=report.summary.error_count,
+            warning_count=report.summary.warning_count,
+            info_count=report.summary.info_count,
+            findings_by_kind=report.summary.findings_by_kind,
+            l2vpn_available=report.summary.l2vpn_available,
+        ),
+        entries=[
+            IpamAlignmentEntryOut(
+                device_id=e.device_id,
+                netbox_device_id=e.netbox_device_id,
+                overall_status=e.overall_status,  # type: ignore[arg-type]
+                finding_count=e.finding_count,
+                top_kinds=e.top_kinds,
+            )
+            for e in report.entries
+        ],
+    )
+
+
+def _finding_out(row: IpamAlignmentFinding) -> IpamAlignmentFindingOut:
+    return IpamAlignmentFindingOut(
+        id=row.id,
+        run_id=row.run_id,
+        device_id=row.device_id,
+        kind=row.kind.value,
+        severity=row.severity.value,
+        status=row.status.value,
+        interface_name=row.interface_name,
+        netbox_observed=row.netbox_observed,
+        gard_observed=row.gard_observed,
+        remediation_hint=row.remediation_hint,
+        created_at=row.created_at,
     )
 
 
@@ -148,6 +203,7 @@ def trigger_sync(
             for o in outcome.report.orphaned_in_gard
         ],
         writeback=_writeback_out(outcome.report.writeback),
+        ipam_alignment=_alignment_out(outcome.report.ipam_alignment),
     )
     return NetboxSyncEnvelope(
         data={
@@ -208,3 +264,34 @@ def get_sync_run(
             },
         )
     return NetboxSyncEnvelope(data={"run": _run_out(run).model_dump(mode="json")})
+
+
+@router.get(
+    "/alignment/findings",
+    response_model=IpamAlignmentFindingList,
+    summary="List IPAM alignment findings",
+)
+def list_alignment_findings(
+    run_id: uuid.UUID | None = Query(default=None),
+    device_id: uuid.UUID | None = Query(default=None),
+    severity: AlignmentFindingSeverity | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+    page_token: str | None = Query(default=None),
+    _: Principal = Depends(require(Permission.READ_NETBOX)),
+    session: Session = Depends(get_session),
+) -> IpamAlignmentFindingList:
+    offset = int(page_token) if page_token and page_token.isdigit() else 0
+    rows, total = align_ctrl.list_findings(
+        session,
+        run_id=run_id,
+        device_id=device_id,
+        severity=severity,
+        limit=limit,
+        offset=offset,
+    )
+    next_token = str(offset + len(rows)) if len(rows) == limit else None
+    return IpamAlignmentFindingList(
+        items=[_finding_out(r) for r in rows],
+        total_returned=total,
+        next_page_token=next_token,
+    )

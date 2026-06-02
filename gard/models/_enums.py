@@ -91,6 +91,8 @@ class EvidenceType(enum.StrEnum):
     firmware_catalog_load = "firmware_catalog_load"
     # F7: chain-of-custody record for a NetBox sync run.
     netbox_sync = "netbox_sync"
+    # F12: chain-of-custody record for an IPAM alignment run.
+    netbox_ipam_alignment = "netbox_ipam_alignment"
 
 
 class NetboxSyncRunStatus(enum.StrEnum):
@@ -99,6 +101,58 @@ class NetboxSyncRunStatus(enum.StrEnum):
     running = "running"
     completed = "completed"
     failed = "failed"
+
+
+class IpamAlignmentRunStatus(enum.StrEnum):
+    """F12 IPAM alignment run lifecycle."""
+
+    completed = "completed"
+    partial = "partial"
+    failed = "failed"
+    skipped = "skipped"
+
+
+class AlignmentFindingSeverity(enum.StrEnum):
+    error = "error"
+    warning = "warning"
+    info = "info"
+
+
+class AlignmentFindingStatus(enum.StrEnum):
+    open = "open"
+    passed = "pass"
+
+    @classmethod
+    def from_value(cls, value: str) -> AlignmentFindingStatus:
+        if value == "pass":
+            return cls.passed
+        return cls(value)
+
+
+class AlignmentFindingKind(enum.StrEnum):
+    """Closed enum — must match specs/012-netbox-ipam-dcim-align/contracts/finding-kinds.yaml."""
+
+    mgmt_ip_match = "mgmt_ip_match"
+    mgmt_ip_mismatch = "mgmt_ip_mismatch"
+    mgmt_ip_missing_in_netbox = "mgmt_ip_missing_in_netbox"
+    mgmt_ip_missing_in_gard = "mgmt_ip_missing_in_gard"
+    mgmt_ip_ambiguous = "mgmt_ip_ambiguous"
+    mgmt_ip_fallback_used = "mgmt_ip_fallback_used"
+    interface_ip_bound = "interface_ip_bound"
+    interface_missing_address = "interface_missing_address"
+    prefix_vrf_scope_mismatch = "prefix_vrf_scope_mismatch"
+    cross_device_address_conflict = "cross_device_address_conflict"
+    shared_address = "shared_address"
+    vrf_mismatch = "vrf_mismatch"
+    vrf_orphaned_in_site = "vrf_orphaned_in_site"
+    access_vlan_missing = "access_vlan_missing"
+    vlan_out_of_scope = "vlan_out_of_scope"
+    vlan_aligned = "vlan_aligned"
+    overlay_rt_aligned = "overlay_rt_aligned"
+    rt_missing_on_interface = "rt_missing_on_interface"
+    rt_import_missing = "rt_import_missing"
+    rt_export_missing = "rt_export_missing"
+    l2vpn_module_unavailable = "l2vpn_module_unavailable"
 
 
 class Role(enum.StrEnum):

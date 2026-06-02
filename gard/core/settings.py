@@ -267,6 +267,25 @@ class Settings(BaseSettings):
         description="When false, sync skips the post-sync write-back phase.",
     )
 
+    # --- F12: NetBox IPAM/DCIM alignment ---------------------------------
+    netbox_ipam_alignment_enabled: bool = Field(
+        default=True,
+        description="When false, sync skips the post-reconcile IPAM alignment phase.",
+    )
+    netbox_alignment_manifest_path: str | None = Field(
+        default=None,
+        description=(
+            "Override path to alignment policy manifest YAML. "
+            "Default: gard-catalog/netbox/alignment-policy-manifest.yaml"
+        ),
+    )
+    netbox_ipam_prefetch_concurrency: int = Field(
+        default=8,
+        ge=1,
+        le=32,
+        description="Concurrent NetBox REST prefetch workers during IPAM collection.",
+    )
+
     def resolved_netbox_write_token(self) -> str | None:
         """Write token for F10; dev/test may fall back to read token."""
         if self.netbox_write_token:

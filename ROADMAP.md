@@ -41,6 +41,7 @@
 | F9 | NetBox Device Type Bootstrap | `netbox-devicetype-bootstrap` | **shipped** (`009-netbox-devicetype-bootstrap`, ADR-0020) | Curated import from community device type library for GARD-supported models only (pinned upstream manifest). Replaces hand-rolled dev seed types; prerequisite for NetBox write-back. | F7 |
 | F10 | NetBox Lifecycle Write-Back | `netbox-writeback` | **shipped** (`010-netbox-writeback`, ADR-0021) | Post-sync push of GARD lifecycle metadata (custom fields + tags) to all NetBox-linked devices in sync batch. Conflict-safe, manifest-driven. | F7, F9, F3, F4 |
 | F11 | Operator Dashboard & Web UI | `operator-dashboard` | **shipped** (`011-operator-dashboard`, ADR-0022) | TypeScript SPA (`web/`) — dashboard, devices, compliance/readiness, NetBox sync visibility, uplift read, audit; thin client over F1–F10 REST. | F1–F10 |
+| F12 | NetBox IPAM & DCIM Alignment | `netbox-ipam-dcim-align` | **shipped** (`012-netbox-ipam-dcim-align`, ADR-0023) | Post-sync pull of interface/IP/VRF/VLAN/L2VPN context from NetBox; alignment policy manifest; findings + network snapshots; operator portal visibility. Read-only toward NetBox in v1. | F7, F10, F11 |
 
 ## Out of v1 scope
 
@@ -76,6 +77,7 @@ during its `/speckit-plan` phase. Numbering continues from the existing
 - **ADR-0018 GARD's place in the NetBox + Diode + Assurance ecosystem** (during F7) — *renumbered from planned ADR-0016*. Formalizes the layering: NetBox owns identity, Discovery+Diode populate it, Assurance polices inventory/config drift, GARD polices firmware/lifecycle drift. Captures why GARD reads NetBox via REST (not Diode gRPC) in v1 and the conditions under which a Diode-SDK adapter would be added later
 - **ADR-0019 MCP transport binding** (during F8) — Streamable HTTP mount, shared auth, tool registry, deny-list; closes ADR-0013 deferral
 - **ADR-0022 Operator web UI boundary** (during F11) — thin client, no Streamlit, RBAC mirror UX-only
+- **ADR-0023 NetBox IPAM/DCIM alignment boundary** (during F12) — read-only alignment phase, policy manifest, finding taxonomy
 
 This list is non-binding for the roadmap itself; each `/speckit-plan` may
 add, remove, or rename ADRs.

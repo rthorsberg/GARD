@@ -63,3 +63,7 @@ python -m gard netbox bootstrap-device-types
 ```
 
 `seed-netbox.sh` runs bootstrap automatically. For production NetBox, use `--confirm`. See [specs/009-netbox-devicetype-bootstrap/quickstart.md](../../specs/009-netbox-devicetype-bootstrap/quickstart.md).
+
+## F12 IPAM alignment
+
+GARD sync reads this NetBox instance via REST on `main` only (no Orb/Diode/Branching integration in F12). After device reconcile, alignment validates IP/VRF/VLAN policy — see [specs/012-netbox-ipam-dcim-align/quickstart.md](../../specs/012-netbox-ipam-dcim-align/quickstart.md).

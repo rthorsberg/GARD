@@ -1,0 +1,114 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://gard.local/schemas/netbox/alignment-policy-manifest.schema.json
+title: GARD NetBox Alignment Policy Manifest
+description: Lifecycle-as-code expectations for IPAM/DCIM alignment (F12)
+type: object
+required:
+  - schema_version
+  - mgmt_ip
+  - interface_policies
+additionalProperties: false
+properties:
+  schema_version:
+    type: string
+    const: "1"
+  sites:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    description: Known NetBox site slugs referenced by policies (validation catalogue)
+  roles:
+    type: array
+    items:
+      type: string
+      minLength: 1
+  vlan_groups:
+    type: array
+    items:
+      type: object
+      required: [site, group_slug]
+      properties:
+        site: { type: string }
+        group_slug: { type: string }
+  vrfs:
+    type: array
+    items:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        rd: { type: string }
+  mgmt_ip:
+    type: object
+    required: [interface_name_patterns]
+    properties:
+      interface_name_patterns:
+        type: array
+        minItems: 1
+        items: { type: string }
+      prefer_ipv4:
+        type: boolean
+        default: true
+      require_assignment:
+        type: boolean
+        default: false
+  interface_policies:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [id, site, role, interface_pattern, require_ip]
+      properties:
+        id: { type: string, pattern: "^[a-z0-9-]+$" }
+        site: { type: string }
+        role: { type: string }
+        interface_pattern: { type: string }
+        require_ip: { type: boolean }
+        allowed_modes:
+          type: array
+          items:
+            type: string
+            enum: [access, tagged, tagged-all, q-in-q, bridge, other]
+  vrf_expectations:
+    type: array
+    items:
+      type: object
+      required: [id, site, role, interface_pattern, expected_vrf]
+      properties:
+        id: { type: string }
+        site: { type: string }
+        role: { type: string }
+        interface_pattern: { type: string }
+        expected_vrf: { type: string }
+  vlan_expectations:
+    type: array
+    items:
+      type: object
+      required: [id, site, vlan_group_slug]
+      properties:
+        id: { type: string }
+        site: { type: string }
+        vlan_group_slug: { type: string }
+        access_interface_pattern: { type: string }
+  overlay_expectations:
+    type: array
+    items:
+      type: object
+      required: [id, service_slug, import_rts, export_rts]
+      properties:
+        id: { type: string }
+        service_slug: { type: string }
+        site: { type: string }
+        role: { type: string }
+        import_rts:
+          type: array
+          items: { type: string }
+        export_rts:
+          type: array
+          items: { type: string }
+  severity_overrides:
+    type: object
+    additionalProperties:
+      type: string
+      enum: [error, warning, info]

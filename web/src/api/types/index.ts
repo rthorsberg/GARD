@@ -162,10 +162,64 @@ export interface NetboxSyncReport {
   created_count: number;
   updated_count: number;
   orphaned_count: number;
+  ipam_alignment?: IpamAlignmentReport | null;
   writeback?: {
     phase: string;
     summary: WritebackSummary;
   } | null;
+}
+
+export interface IpamAlignmentSummary {
+  devices_checked: number;
+  aligned_count: number;
+  mismatch_count: number;
+  error_count: number;
+  warning_count: number;
+  info_count: number;
+  findings_by_kind?: Record<string, number>;
+  l2vpn_available?: boolean;
+}
+
+export interface IpamAlignmentReport {
+  phase: string;
+  run_id?: string | null;
+  summary: IpamAlignmentSummary;
+  entries?: Array<{
+    device_id: string;
+    netbox_device_id: number;
+    overall_status: string;
+    finding_count: number;
+    top_kinds?: string[];
+  }>;
+}
+
+export interface IpamAlignmentFinding {
+  id: string;
+  run_id: string;
+  device_id: string;
+  kind: string;
+  severity: string;
+  status: string;
+  interface_name?: string | null;
+  created_at: string;
+}
+
+export interface IpamAlignmentFindingList {
+  items: IpamAlignmentFinding[];
+  total_returned: number;
+  next_page_token?: string | null;
+}
+
+export interface DeviceNetworkContextOut {
+  device_id: string;
+  netbox_device_id: number;
+  resolved_mgmt_ip?: string | null;
+  mgmt_resolution_method?: string | null;
+  primary_ip4?: string | null;
+  primary_ip6?: string | null;
+  interfaces: Array<Record<string, unknown>>;
+  overlay_bindings?: Array<Record<string, unknown>>;
+  captured_at: string;
 }
 
 export interface NetboxSyncEnvelope {

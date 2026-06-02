@@ -31,6 +31,7 @@ export function NetboxPage() {
       const res = await sync.mutateAsync(confirmWriteback);
       const report = res.data.report;
       const wb = report?.writeback?.summary;
+      const align = report?.ipam_alignment?.summary;
       setResult({
         action: "netbox_sync",
         status: wb && wb.failed > 0 ? "partial" : "success",
@@ -42,6 +43,8 @@ export function NetboxPage() {
           orphaned: report?.orphaned_count ?? 0,
           writeback_updated: wb?.updated ?? 0,
           writeback_failed: wb?.failed ?? 0,
+          alignment_checked: align?.devices_checked ?? 0,
+          alignment_errors: align?.error_count ?? 0,
         },
       });
       toast("NetBox sync completed");
@@ -55,7 +58,7 @@ export function NetboxPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">NetBox integration</h1>
-          <p className="text-sm text-muted-foreground">Sync pull and lifecycle write-back visibility</p>
+          <p className="text-sm text-muted-foreground">Sync pull, IPAM alignment, and lifecycle write-back</p>
         </div>
         <CanAccess roles={session.roles} permission={Permission.SYNC_NETBOX}>
           <div className="flex items-center gap-3">

@@ -25,6 +25,7 @@ ALLOWED_GARD_SOURCES = frozenset(
         "target_firmware",
         "compliance_evaluated_at",
         "readiness_evaluated_at",
+        "ipam_alignment_status",
     }
 )
 

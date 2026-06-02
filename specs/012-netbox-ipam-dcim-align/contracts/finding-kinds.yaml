@@ -1,0 +1,112 @@
+# F12 — closed alignment finding kinds
+
+schema_version: "1"
+description: |
+  Closed enum for IPAM/DCIM alignment findings. Contract tests MUST fail
+  if application code emits a kind not listed here without a schema bump.
+
+kinds:
+  mgmt_ip_match:
+    severity_default: info
+    category: management_ip
+    summary: GARD management_ip matches NetBox canonical management IP
+
+  mgmt_ip_mismatch:
+    severity_default: error
+    category: management_ip
+    summary: GARD management_ip differs from NetBox canonical management IP
+
+  mgmt_ip_missing_in_netbox:
+    severity_default: error
+    category: management_ip
+    summary: GARD has management_ip but NetBox has no resolvable assignment
+
+  mgmt_ip_missing_in_gard:
+    severity_default: warning
+    category: management_ip
+    summary: NetBox has management IP but GARD device.management_ip is null
+
+  mgmt_ip_ambiguous:
+    severity_default: error
+    category: management_ip
+    summary: Multiple equally-ranked management IP candidates on device
+
+  mgmt_ip_fallback_used:
+    severity_default: info
+    category: management_ip
+    summary: Management IP resolved via last-resort fallback rule
+
+  interface_ip_bound:
+    severity_default: info
+    category: interface_ipam
+    summary: Interface has expected IPAM assignment
+
+  interface_missing_address:
+    severity_default: error
+    category: interface_ipam
+    summary: Policy requires IP on interface but none assigned
+
+  prefix_vrf_scope_mismatch:
+    severity_default: error
+    category: interface_ipam
+    summary: Address prefix outside expected VRF/site scope
+
+  cross_device_address_conflict:
+    severity_default: error
+    category: interface_ipam
+    summary: Same IP host assigned to interfaces on different devices
+
+  shared_address:
+    severity_default: info
+    category: interface_ipam
+    summary: Address appears on multiple interfaces (anycast/shared)
+
+  vrf_mismatch:
+    severity_default: error
+    category: vrf
+    summary: Interface VRF differs from site/role policy expectation
+
+  vrf_orphaned_in_site:
+    severity_default: info
+    category: vrf
+    summary: VRF defined in site but unused by synced devices
+
+  access_vlan_missing:
+    severity_default: error
+    category: vlan
+    summary: Access-mode interface lacks untagged VLAN
+
+  vlan_out_of_scope:
+    severity_default: error
+    category: vlan
+    summary: VLAN not in site VLAN group scope
+
+  vlan_aligned:
+    severity_default: info
+    category: vlan
+    summary: VLAN assignments satisfy policy
+
+  overlay_rt_aligned:
+    severity_default: info
+    category: overlay
+    summary: Route-targets match L2VPN service expectation
+
+  rt_missing_on_interface:
+    severity_default: error
+    category: overlay
+    summary: Expected route-target absent on interface/VRF
+
+  rt_import_missing:
+    severity_default: error
+    category: overlay
+    summary: L2VPN service import RT not present on participant
+
+  rt_export_missing:
+    severity_default: error
+    category: overlay
+    summary: L2VPN service export RT not present on participant
+
+  l2vpn_module_unavailable:
+    severity_default: info
+    category: overlay
+    summary: NetBox L2VPN plugin not available; overlay checks skipped
