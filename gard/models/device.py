@@ -54,6 +54,10 @@ class Device(Base):
     netbox_last_writeback_at: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    netbox_last_alignment_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    netbox_alignment_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
     source_system: Mapped[str] = mapped_column(String, nullable=False)

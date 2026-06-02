@@ -45,6 +45,7 @@ properties:
             - target_firmware
             - compliance_evaluated_at
             - readiness_evaluated_at
+            - ipam_alignment_status
         netbox_field:
           type: string
           pattern: "^[a-z0-9_]+$"
@@ -78,5 +79,6 @@ properties:
             - drift_outside_target
             - readiness_blocked
             - readiness_ready_for_uplift
+            - ipam_mismatch
         description:
           type: string

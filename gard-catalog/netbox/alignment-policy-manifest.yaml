@@ -1,0 +1,64 @@
+schema_version: "1"
+
+sites:
+  - oslo
+  - bergen
+  - stockholm
+  - copenhagen
+
+roles:
+  - edge
+  - core
+  - aggregation
+
+vlan_groups:
+  - site: oslo
+    group_slug: oslo-access
+  - site: bergen
+    group_slug: bergen-access
+
+vrfs:
+  - name: default
+  - name: mgmt
+  - name: internet
+
+mgmt_ip:
+  interface_name_patterns:
+    - "(?i)^mgmt"
+    - "(?i)^management"
+    - "(?i)^lo0?"
+    - "(?i)^loopback0?"
+  prefer_ipv4: true
+  require_assignment: false
+
+interface_policies:
+  - id: edge-require-uplink-ip
+    site: "*"
+    role: edge
+    interface_pattern: "(?i)^(gi|ge|eth)\\d"
+    require_ip: true
+    allowed_modes: [access, tagged]
+
+  - id: core-loopback-optional
+    site: "*"
+    role: core
+    interface_pattern: "(?i)^lo"
+    require_ip: false
+
+vrf_expectations:
+  - id: edge-mgmt-vrf
+    site: oslo
+    role: edge
+    interface_pattern: "(?i)^mgmt"
+    expected_vrf: mgmt
+
+vlan_expectations:
+  - id: oslo-access-vlan-group
+    site: oslo
+    vlan_group_slug: oslo-access
+    access_interface_pattern: "(?i)^gi"
+
+overlay_expectations: []
+
+severity_overrides:
+  shared_address: info

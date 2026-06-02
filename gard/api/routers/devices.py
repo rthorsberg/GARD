@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 
 from gard.api.middleware.rbac import require
 from gard.api.schemas.devices import DeviceFacts, DeviceList, DeviceWithEnvelope
+from gard.api.schemas.ipam_alignment import DeviceNetworkContextOut
 from gard.core import device_controller
+from gard.core import ipam_alignment_controller as align_ctrl
 from gard.core.envelope import Reason, build_envelope, confidence_from_level
 from gard.core.rbac import Permission, Principal
 from gard.db.session import get_session
@@ -138,3 +140,32 @@ def get_(
     if d is None:
         raise HTTPException(status_code=404, detail="device not found")
     return _envelope_for(d, session)
+
+
+@router.get(
+    "/{device_id}/network-context",
+    response_model=DeviceNetworkContextOut,
+    summary="Latest network context snapshot for device",
+)
+def get_network_context(
+    device_id: uuid.UUID,
+    _: Principal = Depends(require(Permission.READ_DEVICE)),
+    session: Session = Depends(get_session),
+) -> DeviceNetworkContextOut:
+    d = device_controller.get_device(session, device_id)
+    if d is None:
+        raise HTTPException(status_code=404, detail="device not found")
+    ctx = align_ctrl.get_latest_network_context(session, device_id)
+    if ctx is None:
+        raise HTTPException(status_code=404, detail="no alignment snapshot for device")
+    return DeviceNetworkContextOut(
+        device_id=ctx.device_id,
+        netbox_device_id=ctx.netbox_device_id,
+        resolved_mgmt_ip=ctx.resolved_mgmt_ip,
+        mgmt_resolution_method=ctx.mgmt_resolution_method,
+        primary_ip4=ctx.primary_ip4,
+        primary_ip6=ctx.primary_ip6,
+        interfaces=ctx.interfaces or [],
+        overlay_bindings=ctx.overlay_bindings or [],
+        captured_at=ctx.captured_at,
+    )

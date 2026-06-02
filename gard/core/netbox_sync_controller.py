@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session
 
 from gard.core import audit as audit_emit
 from gard.core import evidence as evidence_emit
+from gard.core import ipam_alignment_controller as align_ctrl
 from gard.core.device_controller import _find_by_identity
 from gard.core.identity import DeviceIdentity
+from gard.core.ipam_alignment_controller import IpamAlignmentReport, skipped_alignment_report
 from gard.core.logging import get_correlation_id
 from gard.core.rbac import Principal
 from gard.core.settings import Settings, get_settings
@@ -59,6 +61,7 @@ class NetboxSyncReport:
     updated_count: int = 0
     orphaned_count: int = 0
     orphaned_in_gard: list[OrphanedDevice] = field(default_factory=list)
+    ipam_alignment: IpamAlignmentReport | None = None
     writeback: WritebackReport | None = None
 
 
@@ -292,6 +295,25 @@ def run_sync(
         )
     )
 
+    if settings.netbox_ipam_alignment_enabled:
+        try:
+            ipam_report = align_ctrl.run_alignment(
+                session=session,
+                audit_session=audit_session,
+                sync_run_id=run.id,
+                devices=linked_devices,
+                client=nb_client,
+                principal=principal,
+                correlation_id=cid,
+                settings=settings,
+            )
+        except Exception as exc:
+            ipam_report = skipped_alignment_report(reason=str(exc))
+    else:
+        ipam_report = skipped_alignment_report(reason="alignment disabled")
+
+    report.ipam_alignment = ipam_report
+
     writeback_report: WritebackReport
     if not settings.writeback_active():
         writeback_report = skipped_writeback_report(reason="write-back disabled or no write token")
@@ -400,6 +422,11 @@ def run_sync(
                 "unchanged": writeback_report.summary.unchanged,
                 "conflict": writeback_report.summary.conflict,
                 "failed": writeback_report.summary.failed,
+            },
+            "ipam_alignment": {
+                "phase": ipam_report.phase.value,
+                "devices_checked": ipam_report.summary.devices_checked,
+                "error_count": ipam_report.summary.error_count,
             },
         },
         references={"netbox_device_count": len(records)},

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceEmptyState } from "@/components/actions/ActionResultPanel";
+import { DeviceNetworkTab } from "@/components/devices/DeviceNetworkTab";
 import type { ComplianceEnvelope, DeviceFacts, ReadinessEnvelope } from "@/api/types";
 
 export function DeviceOverviewTab({ facts }: { facts: DeviceFacts }) {
@@ -187,6 +188,9 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
               <TabsTrigger active={tab === "readiness"} onClick={() => setTab("readiness")}>
                 Readiness
               </TabsTrigger>
+              <TabsTrigger active={tab === "network"} onClick={() => setTab("network")}>
+                Network
+              </TabsTrigger>
             </TabsList>
             <TabsContent>
               {tab === "overview" ? <DeviceOverviewTab facts={facts} /> : null}
@@ -208,6 +212,7 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
                   <DeviceReadinessTab envelope={readiness.data} />
                 )
               ) : null}
+              {tab === "network" ? <DeviceNetworkTab deviceId={deviceId} /> : null}
             </TabsContent>
           </Tabs>
         </CardContent>

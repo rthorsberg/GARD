@@ -181,3 +181,70 @@ class NetboxClient:
                 break
 
         return out
+
+    def _paginate(self, path: str, *, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        offset = 0
+        base_params = dict(params or {})
+        while True:
+            page_params = {**base_params, "limit": self._page_size, "offset": offset}
+            payload = self._request("GET", path, params=page_params)
+            if not isinstance(payload, dict):
+                raise NetboxUnreachable(f"NetBox {path} response is not a JSON object")
+            results = payload.get("results")
+            if not isinstance(results, list):
+                raise NetboxUnreachable(f"NetBox {path} response missing results[]")
+            for item in results:
+                if isinstance(item, dict):
+                    out.append(item)
+            count = payload.get("count")
+            offset += len(results)
+            if not results:
+                break
+            if isinstance(count, int) and offset >= count:
+                break
+            if payload.get("next") is None:
+                break
+        return out
+
+    def get_device(self, device_id: int) -> dict[str, Any]:
+        payload = self._request("GET", f"api/dcim/devices/{device_id}/")
+        if not isinstance(payload, dict):
+            raise NetboxUnreachable("NetBox device detail response is not a JSON object")
+        return payload
+
+    def list_interfaces(self, *, device_id: int) -> list[dict[str, Any]]:
+        return self._paginate("api/dcim/interfaces/", params={"device_id": device_id})
+
+    def list_ip_addresses(self, *, device_id: int) -> list[dict[str, Any]]:
+        return self._paginate("api/ipam/ip-addresses/", params={"device_id": device_id})
+
+    def list_vrfs(self, *, site_id: int | None = None) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
+        if site_id is not None:
+            params["site_id"] = site_id
+        return self._paginate("api/ipam/vrfs/", params=params or None)
+
+    def list_vlans(self, *, site_id: int | None = None) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
+        if site_id is not None:
+            params["site_id"] = site_id
+        return self._paginate("api/ipam/vlans/", params=params or None)
+
+    def list_vlan_groups(self, *, site_id: int | None = None) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
+        if site_id is not None:
+            params["site_id"] = site_id
+        return self._paginate("api/ipam/vlan-groups/", params=params or None)
+
+    def probe_l2vpn_available(self) -> bool:
+        try:
+            self._request("GET", "api/plugins/l2vpn/l2vpns/", params={"limit": 1})
+        except NetboxUnreachable as exc:
+            if "HTTP 404" in str(exc):
+                return False
+            raise
+        return True
+
+    def list_l2vpn_services(self) -> list[dict[str, Any]]:
+        return self._paginate("api/plugins/l2vpn/l2vpns/")

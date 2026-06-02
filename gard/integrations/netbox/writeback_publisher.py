@@ -85,6 +85,8 @@ class DeviceLifecycleSnapshot:
     drift_outside_target: bool
     readiness_blocked: bool
     readiness_ready_for_uplift: bool
+    ipam_alignment_status: str
+    ipam_mismatch: bool
 
 
 def _format_dt(value: dt.datetime | None, *, unknown: str) -> str:
@@ -149,6 +151,8 @@ def build_lifecycle_snapshot(
         readiness_ready_for_uplift=bool(
             readiness is not None and readiness.readiness_state == "ready_for_uplift"
         ),
+        ipam_alignment_status=device.netbox_alignment_status or unknown_sentinel,
+        ipam_mismatch=bool(device.netbox_alignment_status == "mismatch"),
     )
 
 
@@ -160,6 +164,7 @@ def _source_value(snapshot: DeviceLifecycleSnapshot, gard_source: str) -> str:
         "target_firmware": snapshot.target_firmware,
         "compliance_evaluated_at": snapshot.compliance_evaluated_at,
         "readiness_evaluated_at": snapshot.readiness_evaluated_at,
+        "ipam_alignment_status": snapshot.ipam_alignment_status,
     }[gard_source]
 
 
@@ -172,6 +177,8 @@ def _tag_applies(rule_apply_when: str, snapshot: DeviceLifecycleSnapshot) -> boo
         return snapshot.readiness_blocked
     if rule_apply_when == "readiness_ready_for_uplift":
         return snapshot.readiness_ready_for_uplift
+    if rule_apply_when == "ipam_mismatch":
+        return snapshot.ipam_mismatch
     return False
 
 
