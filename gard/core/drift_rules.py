@@ -202,12 +202,22 @@ def is_discovery_drift(
     """Latest observation older than threshold OR device has none.
 
     Returns a reason in two cases:
-    1. ``missing_observation`` — the device has zero observations (F2
-       also surfaces this when the target matched but observed_version
-       is null; we tolerate the overlap because it's deterministic).
+    1. ``missing_observation`` — no non-null ``observed_firmware`` is on
+       file (zero observation rows, or rows exist but all lack firmware).
+       F2 surfaces this as ``state=unknown`` with ``observed_version=None``.
     2. ``stale_observation`` — the latest observation exists but is
        older than ``stale_after_days``.
     """
+    if env.observed_version is None:
+        detail = (
+            "device has no DeviceObservation rows on file"
+            if latest_observation is None
+            else "device has no observed_firmware on file"
+        )
+        return ComplianceReason(
+            kind="missing_observation",
+            detail=detail,
+        )
     if latest_observation is None:
         return ComplianceReason(
             kind="missing_observation",
