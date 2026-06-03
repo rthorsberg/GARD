@@ -9,9 +9,7 @@ from jsonschema import Draft202012Validator
 
 
 def _validator(project_root: Path) -> Draft202012Validator:
-    schema_path = (
-        project_root / "specs/013-netbox-platform-lab/contracts/health-check.schema.yaml"
-    )
+    schema_path = project_root / "specs/013-netbox-platform-lab/contracts/health-check.schema.yaml"
     schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
     return Draft202012Validator(schema)
 
