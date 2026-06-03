@@ -1,0 +1,31 @@
+schema_version: "1"
+minimum_device_count: 3
+
+idempotency_notes: |
+  Re-running ingest smoke may upsert the same device names via Diode reconciler.
+  The smoke script passes when catalogue names remain present on main; duplicate
+  creates are not expected. If counts drop, inspect diode-reconciler logs and
+  restart orb-agent after fixing DIODE_CLIENT_* credentials.
+
+devices:
+  - name: lab-router-01
+    site: oslo
+    role: router
+    device_type: ISR1121-8P
+    serial: LAB-SIM-001
+    simulator_ip: 172.30.77.11
+    expected_primary_ip: 172.30.77.11/32
+
+  - name: lab-router-02
+    site: oslo
+    role: router
+    device_type: ISR1121-8P
+    serial: LAB-SIM-002
+    simulator_ip: 172.30.77.12
+
+  - name: lab-router-03
+    site: oslo
+    role: router
+    device_type: ISR1121-8P
+    serial: LAB-SIM-003
+    simulator_ip: 172.30.77.13

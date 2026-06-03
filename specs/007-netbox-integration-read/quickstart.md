@@ -58,6 +58,15 @@ export GARD_NETBOX_TOKEN=<token-from-that-instance>
 
 No need to start `gard-f7-netbox` at all.
 
+## Upstream NetBox platform (F13)
+
+For a realistic **Orb → Diode → NetBox** ingest path (alternative to `seed-netbox.sh` REST posts), use the F13 platform lab:
+
+- [specs/013-netbox-platform-lab/quickstart.md](../013-netbox-platform-lab/quickstart.md)
+- `./deploy/scripts/platform-lab-start.sh`
+
+GARD still reads merged NetBox REST state on `main` only (ADR-0018, ADR-0023).
+
 ## After F7 implementation
 
 ```bash

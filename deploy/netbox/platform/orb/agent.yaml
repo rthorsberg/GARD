@@ -1,0 +1,24 @@
+orb:
+  config_manager:
+    active: local
+  backends:
+    network_discovery:
+    common:
+      diode:
+        target: grpc://diode-nginx:80/diode
+        # Lab defaults — match authmanager client orb-platform-lab (see platform/diode/README.md)
+        client_id: orb-platform-lab
+        client_secret: gard-lab-orb-ingest-dev-only
+        agent_name: gard-platform-lab
+        dry_run: false
+  policies:
+    network_discovery:
+      platform_lab_fixture:
+        config:
+          schedule: "*/5 * * * *"
+          timeout: 5
+        scope:
+          targets:
+            - 172.30.77.11
+            - 172.30.77.12
+            - 172.30.77.13

@@ -1,0 +1,32 @@
+name: Platform Lab Contracts
+
+on:
+  pull_request:
+    paths:
+      - "specs/013-netbox-platform-lab/**"
+      - "deploy/netbox/**"
+      - "deploy/scripts/platform-lab*.sh"
+      - "deploy/scripts/fixtures/platform-lab/**"
+      - "tests/contract/test_platform_lab*.py"
+      - ".github/workflows/platform-lab-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Platform lab contract tests
+        run: |
+          uv run pytest \
+            tests/contract/test_platform_lab_manifest.py \
+            tests/contract/test_platform_lab_health_schema.py \
+            tests/contract/test_platform_lab_ingest_catalogue.py \
+            -q
