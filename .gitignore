@@ -25,6 +25,8 @@ __pycache__/
 venv/
 .env
 .env.*
+!.env.example
+!**/.env.example
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -40,4 +42,5 @@ web/dist/
 web/coverage/
 web/playwright-report/
 web/test-results/
+web/.vite/
 *.tsbuildinfo

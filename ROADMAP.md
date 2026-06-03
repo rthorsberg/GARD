@@ -42,6 +42,7 @@
 | F10 | NetBox Lifecycle Write-Back | `netbox-writeback` | **shipped** (`010-netbox-writeback`, ADR-0021) | Post-sync push of GARD lifecycle metadata (custom fields + tags) to all NetBox-linked devices in sync batch. Conflict-safe, manifest-driven. | F7, F9, F3, F4 |
 | F11 | Operator Dashboard & Web UI | `operator-dashboard` | **shipped** (`011-operator-dashboard`, ADR-0022) | TypeScript SPA (`web/`) — dashboard, devices, compliance/readiness, NetBox sync visibility, uplift read, audit; thin client over F1–F10 REST. | F1–F10 |
 | F12 | NetBox IPAM & DCIM Alignment | `netbox-ipam-dcim-align` | **shipped** (`012-netbox-ipam-dcim-align`, ADR-0023) | Post-sync pull of interface/IP/VRF/VLAN/L2VPN context from NetBox; alignment policy manifest; findings + network snapshots; operator portal visibility. Read-only toward NetBox in v1. | F7, F10, F11 |
+| F13 | NetBox Platform Lab | `netbox-platform-lab` | **in progress** (`013-netbox-platform-lab`, ADR-0024) | Dev/lab deploy only: Orb → Diode → NetBox ingest, optional Branching merge workflow, drift fixtures for F12 validation. No GARD application code. | F7, F9, F12, ADR-0018 |
 
 ## Out of v1 scope
 

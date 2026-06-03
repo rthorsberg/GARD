@@ -30,9 +30,14 @@ Validate schema:
 uv run pytest tests/contract/test_netbox_alignment_manifest.py -q
 ```
 
-## Upstream NetBox platform (out of F12 scope)
+## Upstream NetBox platform (F13)
 
-GARD reads merged NetBox REST state on `main` only. Deploying [Orb](https://netboxlabs.com/docs/orb-agent/) → [Diode](https://netboxlabs.com/docs/diode/) → NetBox with [Branching](https://netboxlabs.com/docs/extensions/branching/) is a separate platform/lab concern — not integrated in F12. See ADR-0023.
+GARD reads merged NetBox REST state on `main` only. To populate NetBox via **Orb → Diode → NetBox** and practice **merge-to-main before sync**, use the F13 platform lab:
+
+- [specs/013-netbox-platform-lab/quickstart.md](../013-netbox-platform-lab/quickstart.md) — ingest smoke, branch merge demo, GARD handoff
+- [ADR-0024](../../adr/ADR-0024-netbox-platform-lab-boundary.md) — deploy-only boundary
+
+Legacy minimal lab: `deploy/scripts/seed-netbox.sh` remains valid (FR-011 alternate path).
 
 ## 2. Run sync (triggers alignment)
 

@@ -1,0 +1,25 @@
+# GARD F13 — NetBox with Diode (+ optional Branching) plugins
+#
+# Build:
+#   docker build -f deploy/netbox/Dockerfile.plugins \
+#     --build-arg GARD_NETBOX_BRANCHING_ENABLED=1 \
+#     -t gard-netbox-platform:dev deploy/netbox
+
+ARG NETBOX_VERSION=v4.6-5.0.1
+FROM netboxcommunity/netbox:${NETBOX_VERSION}
+
+ARG GARD_NETBOX_BRANCHING_ENABLED=0
+
+USER root
+
+COPY plugin_requirements.txt /opt/netbox/
+RUN /usr/local/bin/uv pip install -r /opt/netbox/plugin_requirements.txt
+RUN if [ "$GARD_NETBOX_BRANCHING_ENABLED" = "1" ]; then \
+      /usr/local/bin/uv pip install netboxlabs-netbox-branching; \
+    fi
+
+COPY configuration/plugins.py /etc/netbox/config/plugins.py
+RUN DEBUG="true" SECRET_KEY="dummydummydummydummydummydummydummydummydummydummy" \
+    /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py collectstatic --no-input
+
+USER netbox

@@ -1,0 +1,72 @@
+# Reference copy — canonical for contract tests.
+# Deploy defaults may override ports via env documented in quickstart.
+
+schema_version: "1"
+project_name: gard-f7-netbox
+
+compose_files:
+  - deploy/netbox/docker-compose.yml
+  - deploy/netbox/docker-compose.platform.yml
+
+ports:
+  - name: netbox_ui
+    host_port: 18888
+    container_port: 8080
+    override_env: GARD_NETBOX_HOST_PORT
+    description: NetBox UI and REST API (GARD reads main branch here)
+  - name: netbox_postgres
+    host_port: 55432
+    container_port: 5432
+    override_env: GARD_NETBOX_PG_HOST_PORT
+    description: Exposed for local debugging only
+  - name: diode_grpc
+    host_port: 58080
+    container_port: 8080
+    override_env: GARD_DIODE_GRPC_HOST_PORT
+    description: Diode gRPC ingress (nginx front)
+
+services:
+  - name: netbox
+    role: netbox
+    required: true
+    health_probe: http://127.0.0.1:${GARD_NETBOX_HOST_PORT:-18888}/login/
+  - name: netbox-worker
+    role: netbox
+    required: true
+    health_probe: rqworker_running
+  - name: postgres
+    role: datastore
+    required: true
+    health_probe: pg_isready
+  - name: redis
+    role: datastore
+    required: true
+    health_probe: redis_ping
+  - name: diode-nginx
+    role: diode
+    required: true
+    health_probe: grpc_health
+  - name: orb-agent
+    role: orb
+    required: true
+    health_probe: container_running
+  - name: lab-sim-1
+    role: simulator
+    required: true
+    health_probe: ping
+  - name: lab-sim-2
+    role: simulator
+    required: true
+    health_probe: ping
+  - name: lab-sim-3
+    role: simulator
+    required: true
+    health_probe: ping
+
+branching:
+  enabled_env: GARD_NETBOX_BRANCHING_ENABLED
+  plugin_name: netbox_branching
+
+diode:
+  netbox_plugin_api_base_url: http://netbox:8080
+  grpc_target: grpc://diode-nginx:8080/diode

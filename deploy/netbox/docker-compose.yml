@@ -5,6 +5,9 @@
 #
 #   docker compose -p gard-f7-netbox -f deploy/netbox/docker-compose.yml up -d
 #
+# F13 platform lab (Orb + Diode + Orb): use platform overlay — see README.md
+#   ./deploy/scripts/platform-lab-start.sh
+#
 # Default host ports (override via env):
 #   NetBox UI  → 18888  (existing lab stack may use 18080)
 #   Postgres   → 55432  (GARD postgres uses 5432)
