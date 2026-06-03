@@ -1,0 +1,26 @@
+# Optional lab profile: use with  docker compose --profile lab ...
+# Targets match lab-sim containers on 172.30.77.11-13
+
+orb:
+  config_manager:
+    active: local
+  backends:
+    network_discovery:
+    common:
+      diode:
+        target: grpc://diode-nginx:80/diode
+        client_id: REPLACE_AFTER_SETUP_OAUTH
+        client_secret: REPLACE_AFTER_SETUP_OAUTH
+        agent_name: netbox-platform-lab
+        dry_run: false
+  policies:
+    network_discovery:
+      lab_simulators:
+        config:
+          schedule: "*/5 * * * *"
+          timeout: 5
+        scope:
+          targets:
+            - 172.30.77.11
+            - 172.30.77.12
+            - 172.30.77.13

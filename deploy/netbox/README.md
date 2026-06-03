@@ -24,6 +24,12 @@ cp deploy/netbox/.env.example deploy/netbox/.env   # first time
 
 Runbook: [specs/013-netbox-platform-lab/quickstart.md](../../specs/013-netbox-platform-lab/quickstart.md)
 
+### Standalone bundle (no GARD code)
+
+For a discovery host or agent VM, use the self-contained folder (sparse-checkout friendly):
+
+[netbox-platform-standalone/](../../netbox-platform-standalone/README.md) — single `docker-compose.yml`, project `netbox-platform`, same Orb → Diode → NetBox path without cloning the full GARD repo.
+
 ### Port matrix
 
 | Service | Host port | Override env | Notes |

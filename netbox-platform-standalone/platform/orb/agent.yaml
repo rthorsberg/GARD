@@ -1,0 +1,32 @@
+# Edit this file for your environment before starting Orb.
+#
+# Bridge networking (default compose):
+#   target: grpc://diode-nginx:80/diode
+#
+# Host networking (docker-compose.orb-host.yml):
+#   target: grpc://127.0.0.1:58080/diode
+
+orb:
+  config_manager:
+    active: local
+  backends:
+    network_discovery:
+    common:
+      diode:
+        target: grpc://diode-nginx:80/diode
+        # Literal values required — run ./scripts/setup-oauth.sh to fill from Hydra
+        client_id: REPLACE_AFTER_SETUP_OAUTH
+        client_secret: REPLACE_AFTER_SETUP_OAUTH
+        agent_name: netbox-platform-discovery
+        dry_run: false
+  policies:
+    network_discovery:
+      discovery:
+        config:
+          schedule: "*/15 * * * *"
+          timeout: 120
+        scope:
+          targets:
+            # Example — replace with your device management IPs or CIDRs:
+            # - 10.10.1.0/24
+            - 127.0.0.1

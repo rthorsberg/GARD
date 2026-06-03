@@ -1,0 +1,13 @@
+# Overlay: run Orb with host networking so discovery can reach routed mgmt subnets.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.orb-host.yml \
+#     -p netbox-platform --env-file .env up -d --build
+#
+# In platform/orb/agent.yaml set:
+#   target: grpc://127.0.0.1:58080/diode
+
+services:
+  orb-agent:
+    network_mode: host
+    networks: []

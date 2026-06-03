@@ -1,0 +1,24 @@
+# NetBox + Diode plugin (+ optional Branching)
+#
+#   docker build -f Dockerfile.plugins \
+#     --build-arg NETBOX_BRANCHING_ENABLED=1 \
+#     -t netbox-platform:dev .
+
+ARG NETBOX_VERSION=v4.6-5.0.1
+FROM netboxcommunity/netbox:${NETBOX_VERSION}
+
+ARG NETBOX_BRANCHING_ENABLED=0
+
+USER root
+
+COPY plugin_requirements.txt /opt/netbox/
+RUN /usr/local/bin/uv pip install -r /opt/netbox/plugin_requirements.txt
+RUN if [ "$NETBOX_BRANCHING_ENABLED" = "1" ]; then \
+      /usr/local/bin/uv pip install netboxlabs-netbox-branching; \
+    fi
+
+COPY configuration/plugins.py /etc/netbox/config/plugins.py
+RUN DEBUG="true" SECRET_KEY="dummydummydummydummydummydummydummydummydummydummy" \
+    /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py collectstatic --no-input
+
+USER netbox
